@@ -109,6 +109,7 @@ export const players = sqliteTable("players", {
   roomId: integer("room_id").notNull(),
   playerKey: text("player_key").notNull(),
   name: text("name").notNull(),
+  email: text("email").notNull().default(""),
   score: integer("score").notNull().default(0),
   joinedAt: integer("joined_at").notNull(),
 }, table => ({ uniqueName: uniqueIndex("player_room_name").on(table.roomId, table.name) }));

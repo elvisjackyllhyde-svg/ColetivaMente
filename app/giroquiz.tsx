@@ -52,6 +52,7 @@ export function GiroQuizApp() {
   const [pdfLoading,setPdfLoading]=useState(false);
   const [code, setCode] = useState("");
   const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
   const [hostKey, setHostKey] = useState("");
   const [playerKey, setPlayerKey] = useState("");
   const [playerId, setPlayerId] = useState<number | null>(null);
@@ -152,10 +153,10 @@ export function GiroQuizApp() {
 
   const joinRoom = async () => {
     unlockAudio();
-    if (code.length !== 6 || name.trim().length < 2) { setError("Escribe el código de 6 dígitos y tu nombre."); return; }
+    if (code.length !== 6 || name.trim().length < 2 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { setError("Informe o código da sala, seu nome e um e-mail válido."); return; }
     setLoading(true); setError("");
     try {
-      const res = await fetch(`/api/rooms/${code}/join`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ name }) });
+      const res = await fetch(`/api/rooms/${code}/join`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ name, email }) });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "No fue posible entrar.");
       setPlayerId(data.playerId); setPlayerKey(data.playerKey); setScreen("player");
@@ -208,6 +209,8 @@ export function GiroQuizApp() {
             <input className="codeInput" inputMode="numeric" maxLength={6} value={code} onChange={e => setCode(e.target.value.replace(/\D/g, ""))} placeholder="000000" autoFocus />
             <label>Seu nome</label>
             <input maxLength={24} value={name} onChange={e => setName(e.target.value)} placeholder="Como você quer aparecer?" onKeyDown={e => e.key === "Enter" && joinRoom()} />
+            <label>Seu melhor e-mail</label>
+            <input type="email" maxLength={120} autoComplete="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="voce@empresa.com" onKeyDown={e => e.key === "Enter" && joinRoom()} />
             <button className="primary" onClick={joinRoom} disabled={loading}>{loading ? "Entrando…" : "Jogar agora"}</button>
           </div>
         )}
