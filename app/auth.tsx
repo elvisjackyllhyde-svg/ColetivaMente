@@ -3,13 +3,29 @@ import { useEffect, useState } from "react";
 import "./auth.css";
 import { Field } from "./ui";
 
-type User = { id: number; name: string; email: string; company: string; subscriptionStatus: string; isAdmin: boolean };
+type User = { id: number; name: string; email: string; company: string; subscriptionStatus: string; subscriptionExpiresAt: string | null; isAdmin: boolean };
+
+export function remainingAccessDays(user: User) {
+  if (user.isAdmin) return null;
+  if (user.subscriptionStatus !== "active" || !user.subscriptionExpiresAt) return 0;
+  return Math.max(0, Math.ceil((new Date(user.subscriptionExpiresAt).getTime() - Date.now()) / 86_400_000));
+}
 
 export function useAuth() {
   const [user, setUser] = useState<User | null | undefined>(undefined);
   const load = () => fetch("/api/auth/me", { cache: "no-store" }).then(r => r.json()).then(d => setUser(d.user));
   useEffect(() => { load(); }, []);
   return { user, loading: user === undefined, reload: load };
+}
+
+export function AccountStatus() {
+  const { user, loading } = useAuth();
+  const logout = async () => { await fetch("/api/auth/logout", { method: "POST" }); location.href = "/"; };
+  if (loading) return <div className="accountStatus loading">Verificando conta…</div>;
+  if (!user) return <div className="accountStatus guest"><span>Você não está logado</span><a href="/?modo=login">Entrar</a></div>;
+  const days = remainingAccessDays(user);
+  const active = user.isAdmin || (days !== null && days > 0);
+  return <div className="accountStatus logged"><a className="accountIdentity" href="/?modo=conta"><i>{user.name.trim().charAt(0).toUpperCase()}</i><span><b>{user.name.split(" ")[0]}</b><small>{user.isAdmin ? "Acesso total" : active ? `${days} ${days === 1 ? "dia disponível" : "dias disponíveis"}` : "Acesso expirado"}</small></span></a><button onClick={logout}>Sair</button></div>;
 }
 
 function AuthHeader() {
@@ -92,10 +108,12 @@ export function AccountPage() {
   if (loading) return <main className="aCenter"><div className="aLoader" /></main>;
   if (!user) return <><AuthHeader /><main className="aCenter"><section className="aCard"><p className="aEyebrow">CONTA</p><h1>Você não está logado</h1><p className="aMuted">Entre ou crie uma conta para gerenciar sua assinatura.</p><div className="aSuccessActions"><a className="aBtn primary" href="/?modo=login">Entrar</a><a className="aBtn secondary" href="/?modo=signup">Criar conta</a></div></section></main></>;
 
-  const active = user.isAdmin || user.subscriptionStatus === "active";
+  const days = remainingAccessDays(user);
+  const active = user.isAdmin || (days !== null && days > 0);
   return <><AuthHeader /><main className="aCenter"><section className="aCard">
     <p className="aEyebrow">MINHA CONTA</p><h1>Olá, {user.name.split(" ")[0]}</h1>
     <div className="aStatusRow"><span>PLANO</span><b className={active ? "aActive" : "aInactive"}>{user.isAdmin ? "Admin — acesso total" : active ? "Assinatura ativa" : "Sem assinatura"}</b></div>
+    {!user.isAdmin && <div className="aStatusRow"><span>DISPONIBILIDADE</span><b className={active ? "aActive" : "aInactive"}>{active ? `${days} dias restantes` : "Acesso expirado"}</b></div>}
     <div className="aStatusRow"><span>E-MAIL</span><b>{user.email}</b></div>
     {!active && <>
       <p className="aMuted">Assine por R$120/mês para criar GiroQuiz, pesquisas e sorteios ilimitados para sua equipe.</p>
@@ -110,6 +128,6 @@ export function RequireActiveSubscription({ children }: { children: React.ReactN
   const { user, loading } = useAuth();
   if (loading) return <main className="aCenter"><div className="aLoader" /></main>;
   if (!user) return <><AuthHeader /><main className="aCenter"><section className="aCard"><p className="aEyebrow">ACESSO RESTRITO</p><h1>Entre para continuar</h1><p className="aMuted">Você precisa de uma conta para criar essa dinâmica.</p><div className="aSuccessActions"><a className="aBtn primary" href="/?modo=login">Entrar</a><a className="aBtn secondary" href="/?modo=signup">Criar conta</a></div></section></main></>;
-  if (!user.isAdmin && user.subscriptionStatus !== "active") return <><AuthHeader /><main className="aCenter"><section className="aCard"><p className="aEyebrow">ASSINATURA NECESSÁRIA</p><h1>Assine para criar dinâmicas</h1><p className="aMuted">Sua conta está ativa, mas ainda não tem uma assinatura. R$120/mês, cancele quando quiser.</p><a className="aBtn primary big" href="/?modo=conta">Ir para minha conta →</a></section></main></>;
+  if (!user.isAdmin && remainingAccessDays(user) === 0) return <><AuthHeader /><main className="aCenter"><section className="aCard"><p className="aEyebrow">ASSINATURA NECESSÁRIA</p><h1>Assine para criar dinâmicas</h1><p className="aMuted">Sua conta está sem dias disponíveis. R$120/mês, cancele quando quiser.</p><a className="aBtn primary big" href="/?modo=conta">Ir para minha conta →</a></section></main></>;
   return <>{children}</>;
 }

@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import "./giroquiz.css";
 import { categoryCatalog, makeStudyQuiz, nicheInfo, type Difficulty, type StudyNiche, type StudyQuestion } from "../lib/study-banks";
 import { categoryNames, makeCategoryQuiz, type CategoryTopic } from "../lib/category-banks";
-import { useAuth } from "./auth";
+import { remainingAccessDays, useAuth } from "./auth";
 import QRCode from "qrcode";
 import { defaultMusicTrack, musicTrackFile, musicTracks, type MusicScope } from "../lib/music-tracks";
 
@@ -130,7 +130,7 @@ export function GiroQuizApp() {
 
   const startCreating = () => {
     if (!user) { location.href = "/?modo=login"; return; }
-    if (!user.isAdmin && user.subscriptionStatus !== "active") { location.href = "/?modo=conta"; return; }
+    if (!user.isAdmin && remainingAccessDays(user) === 0) { location.href = "/?modo=conta"; return; }
     setScreen("setup");
   };
 

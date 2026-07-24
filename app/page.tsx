@@ -5,7 +5,7 @@ import "./hub.css";
 import "./voto-gold.css";
 import { RaffleBuilder, RaffleView } from "./raffle";
 import { Field, LinkBox } from "./ui";
-import { AccountPage, LoginPage, RequireActiveSubscription, SignupPage } from "./auth";
+import { AccountPage, AccountStatus, LoginPage, RequireActiveSubscription, SignupPage } from "./auth";
 import { GiroQuizApp } from "./giroquiz";
 
 type Item={id?:number;name:string;category:string;price:string;votes?:number};
@@ -32,7 +32,7 @@ export default function Home(){
   if(params.mode==="voto")return <RequireActiveSubscription><Builder/></RequireActiveSubscription>;
   if(params.mode==="sorteio")return <RequireActiveSubscription><RaffleBuilder/></RequireActiveSubscription>;
   if(params.mode==="quiz")return <GiroQuizApp/>;
-  return <ExperienceHub/>;
+  return <><AccountStatus/><ExperienceHub/></>;
  }
  return <CampaignView slug={params.slug} admin={params.admin}/>;
 }

@@ -73,6 +73,7 @@ export const users = sqliteTable("users", {
   name: text("name").notNull(),
   company: text("company").notNull().default(""),
   subscriptionStatus: text("subscription_status").notNull().default("inactive"),
+  subscriptionExpiresAt: text("subscription_expires_at"),
   mpSubscriptionId: text("mp_subscription_id").notNull().default(""),
   isAdmin: integer("is_admin", { mode: "boolean" }).notNull().default(false),
   createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),

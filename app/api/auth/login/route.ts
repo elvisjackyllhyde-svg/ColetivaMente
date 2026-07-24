@@ -11,5 +11,5 @@ export async function POST(request: Request) {
   const [user] = await db.select().from(users).where(eq(users.email, email)).limit(1);
   if (!user || !(await verifyPassword(password, user.passwordHash))) return Response.json({ error: "E-mail ou senha incorretos." }, { status: 401 });
   const cookie = await createSession(db, user.id);
-  return Response.json({ id: user.id, name: user.name, email: user.email, company: user.company, subscriptionStatus: user.subscriptionStatus }, { headers: { "Set-Cookie": cookie } });
+  return Response.json({ id: user.id, name: user.name, email: user.email, company: user.company, subscriptionStatus: user.subscriptionStatus, subscriptionExpiresAt: user.subscriptionExpiresAt }, { headers: { "Set-Cookie": cookie } });
 }
