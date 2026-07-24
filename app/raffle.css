@@ -1,0 +1,39 @@
+.rHeader,.rFooter{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Inter,Roboto,sans-serif}
+.rHeader{height:78px;display:flex;align-items:center;padding:0 max(22px,5vw);border-bottom:1px solid #e7e6f0;background:#fffffdf2;backdrop-filter:blur(10px)}
+.rBrand{display:flex;align-items:center;gap:12px;color:#14161f;text-decoration:none}.rBrand>span{display:grid;place-items:center;width:42px;height:42px;border-radius:12px;background:linear-gradient(145deg,#f2822e,#d94f0e);color:#fff;font:800 18px/1 sans-serif}.rBrand div{display:flex;flex-direction:column}.rBrand strong{font:800 18px/1.1 sans-serif;letter-spacing:-.01em}.rBrand small{color:#5b6270;font-size:9px;font-weight:700;letter-spacing:.13em;margin-top:2px}
+.rFooter{text-align:center;color:#8a8f9c;font-size:12px;padding:26px}
+.rCenter{min-height:calc(100vh - 78px);display:grid;place-items:center;padding:20px;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Inter,Roboto,sans-serif}
+.rContainer{width:min(900px,calc(100% - 32px));margin:0 auto 60px;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Inter,Roboto,sans-serif;color:#14161f}
+.rHero{text-align:center;padding:52px 15px 34px}.rHero h1{font:800 clamp(30px,4.4vw,46px)/1.1 sans-serif;margin:10px 0 12px;letter-spacing:-.02em}.rHero>p:last-child{color:#5b6270;font-size:16px;max-width:520px;margin:0 auto}
+.rEyebrow{display:inline-flex;align-items:center;gap:8px;color:#d94f0e;font-size:11px;font-weight:800;letter-spacing:.13em;background:#fdefe4;padding:7px 15px;border-radius:99px}
+.rAlert{background:#fff2d6;border:1px solid #e5c77f;color:#754f08;padding:12px 15px;border-radius:10px;margin-bottom:15px}
+.rPanel{background:#fff;border:1px solid #e7e6f0;border-radius:18px;padding:clamp(20px,4vw,32px);box-shadow:0 12px 36px #14161f08;margin-bottom:16px}
+.rFormGrid{display:grid;gap:16px}
+.rLaunch{display:flex;justify-content:center;padding:8px 0 20px}
+.rBtn{display:inline-block;border:1px solid transparent;border-radius:10px;padding:11px 18px;font-weight:700;text-decoration:none;text-align:center;cursor:pointer;font-size:14px}
+.rBtn.primary{background:linear-gradient(135deg,#f2822e,#d94f0e);color:#fff;box-shadow:0 10px 26px #d94f0e30}
+.rBtn.secondary{background:#f3f2fa;color:#14161f;border-color:#e7e6f0}
+.rBtn.big{padding:14px 24px;font-size:15px}
+.rBtn:disabled{opacity:.5;cursor:not-allowed}
+.rSuccess{width:min(640px,100%);text-align:center;padding:clamp(30px,6vw,54px);background:#fff;border:1px solid #e7e6f0;border-radius:22px;box-shadow:0 20px 55px #14161f10}
+.rSuccessIcon{font-size:40px;margin-bottom:14px}
+.rSuccessActions{display:flex;justify-content:center;gap:10px;margin-top:22px;flex-wrap:wrap}
+.rHint{display:block;margin-top:10px;color:#8a8f9c;font-size:12px}
+.rKpis{display:grid;grid-template-columns:repeat(2,1fr);gap:12px;margin-bottom:20px}.rKpis article{border:1px solid #e7e6f0;border-radius:15px;background:#fff;padding:18px;text-align:center}.rKpis article>span{display:block;color:#8a8f9c;font-size:9px;font-weight:800;letter-spacing:.12em}.rKpis article>strong{display:block;font:800 32px sans-serif;margin-top:6px;color:#d94f0e}
+.rSuspense{text-align:center;padding:34px 18px;margin-bottom:20px;background:#fff;border:1px solid #e7e6f0;border-radius:18px}
+.rSpinName{margin-top:16px;font:800 clamp(24px,4vw,34px) sans-serif;color:#d94f0e;animation:rPulse .45s ease-in-out infinite alternate}
+@keyframes rPulse{from{opacity:.55;transform:scale(.97)}to{opacity:1;transform:scale(1.02)}}
+.rWinners{display:grid;gap:10px;margin-bottom:20px}
+.rWinnerCard{display:flex;align-items:center;gap:14px;background:linear-gradient(90deg,#fff7ef,#fff);border:1px solid #f3cfa6;border-radius:14px;padding:16px 18px;animation:rWinIn .5s ease both}
+.rWinnerCard>span{display:grid;place-items:center;width:32px;height:32px;border-radius:50%;background:#d94f0e;color:#fff;font-weight:800;font-size:13px;flex:none}
+.rWinnerCard>strong{font-size:17px}
+@keyframes rWinIn{from{opacity:0;transform:translateY(10px) scale(.98)}}
+.rEntryList h2{font:800 18px sans-serif;margin:0 0 14px}
+.rEntryTable{display:grid;gap:8px;max-height:340px;overflow:auto}
+.rEntryRow{display:flex;justify-content:space-between;gap:12px;padding:10px 12px;background:#faf9fc;border:1px solid #eeedf5;border-radius:10px;font-size:13px}
+.rEntryRow small{color:#8a8f9c}
+.rEntryFields{display:grid;gap:14px;text-align:left;margin:22px 0}
+.rLoader{width:42px;height:42px;border:4px solid #eeedf5;border-top-color:#d94f0e;border-radius:50%;animation:rSpin 1s linear infinite}
+@keyframes rSpin{to{transform:rotate(360deg)}}
+.rAdmin .rHero{padding-top:36px}
+@media(max-width:700px){.rSuccessActions{flex-direction:column}.rKpis{grid-template-columns:1fr 1fr}}

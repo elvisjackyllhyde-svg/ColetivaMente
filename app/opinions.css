@@ -1,0 +1,11 @@
+.opinionGroups{overflow:auto;padding:18px 28px 28px;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+.opinionGroup{background:#fff;border:1px solid #dfe5e1;border-radius:16px;padding:18px;box-shadow:0 7px 22px #17211d0b}
+.opinionGroupHead{display:grid;grid-template-columns:36px 1fr auto;align-items:center;gap:10px;padding-bottom:13px;border-bottom:1px solid #e8ece9}
+.opinionGroupHead>span{display:grid;place-items:center;width:34px;height:34px;border-radius:10px;background:#e5f0ea;color:#176c4c;font:700 13px Georgia}
+.opinionGroupHead small{color:#176c4c;font-size:9px;font-weight:850;text-transform:uppercase;letter-spacing:.1em}
+.opinionGroupHead h3{font:700 22px Georgia;margin:2px 0 0}
+.opinionGroupHead>b{background:#edf2ef;color:#5d6e65;border-radius:99px;padding:7px 9px;font-size:9px}
+.groupComments{display:grid;gap:8px;padding-top:12px}
+.groupComments p{font:italic 16px/1.45 Georgia;margin:0;padding:11px 13px;background:#f5f7f5;border-left:3px solid #d5a13f;border-radius:3px 9px 9px 3px}
+.homeButton{background:#26362f;color:#e6efe9;border-color:#43564d;white-space:nowrap}
+@media(max-width:700px){.opinionGroups{grid-template-columns:1fr;padding:14px}.opinionGroupHead{grid-template-columns:34px 1fr}.opinionGroupHead>b{grid-column:2;justify-self:start}.opinionGroupHead h3{font-size:20px}}
