@@ -10,6 +10,7 @@ import { defaultMusicTrack, musicTrackFile, musicTracks, type MusicScope } from 
 
 type Player = { id: number; name: string; score: number; answered?: boolean };
 type CustomQuestion=StudyQuestion;
+type SavedQuiz={id:number;title:string;subject:string;questions:CustomQuestion[];musicTrack:string;musicScope:MusicScope;updatedAt:string};
 type Question = { index: number; total: number; text: string; options: string[]; timeLimit: number };
 type GameState = {
   code: string; title?: string; subject?: string; status: "lobby" | "question" | "reveal" | "finished" | "cancelled";
@@ -44,6 +45,7 @@ export function GiroQuizApp() {
   const [quizTitle,setQuizTitle]=useState("GiroQuiz");
   const [quizSubject,setQuizSubject]=useState("Desafio de conhecimento");
   const [customQuestions,setCustomQuestions]=useState<CustomQuestion[] | null>(null);
+  const [savedQuizzes,setSavedQuizzes]=useState<SavedQuiz[]>([]);
   const [studyNiche,setStudyNiche]=useState<StudyNiche|"">("");
   const [studyCount,setStudyCount]=useState(10);
   const [difficulty,setDifficulty]=useState<Difficulty>("medio");
@@ -128,11 +130,15 @@ export function GiroQuizApp() {
     void bgMusic.current.play().catch(() => {});
   }, [screen, state?.musicTrack, state?.musicScope]);
 
+  const loadSavedQuizzes=useCallback(async()=>{try{const response=await fetch("/api/quiz-library",{cache:"no-store"});const data=await response.json();if(response.ok)setSavedQuizzes(data.quizzes||[]);}catch{/* A criação continua disponível mesmo se a biblioteca falhar. */}},[]);
   const startCreating = () => {
     if (!user) { location.href = "/?modo=login"; return; }
     if (!user.isAdmin && remainingAccessDays(user) === 0) { location.href = "/?modo=conta"; return; }
-    setScreen("setup");
+    setScreen("setup");void loadSavedQuizzes();
   };
+
+  const openSavedQuiz=(quiz:SavedQuiz)=>{setQuizTitle(quiz.title);setQuizSubject(quiz.subject);setCustomQuestions(quiz.questions);setMusicTrackLocal(quiz.musicTrack||defaultMusicTrack);setMusicScopeLocal(quiz.musicScope||"all");setStudyNiche("");setCategoryTopic("");setPdfName("");setError("")};
+  const deleteSavedQuiz=async(id:number)=>{if(!confirm("Excluir este quiz salvo?"))return;const response=await fetch(`/api/quiz-library?id=${id}`,{method:"DELETE"});if(response.ok)setSavedQuizzes(items=>items.filter(item=>item.id!==id))};
 
   const createRoom = async () => {
     unlockAudio();
@@ -187,7 +193,7 @@ export function GiroQuizApp() {
   const topThree = useMemo(() => state?.players.slice(0, 3) ?? [], [state]);
 
 
-  if(screen==="setup")return <div className="gq"><SetupScreen title={quizTitle} subject={quizSubject} questions={customQuestions} niche={studyNiche} categoryTopic={categoryTopic} count={studyCount} difficulty={difficulty} pdfName={pdfName} pdfLoading={pdfLoading} loading={loading} error={error} musicTrack={musicTrack} musicScope={musicScope} onTitle={setQuizTitle} onSubject={setQuizSubject} onCount={n=>{setStudyCount(n);if(studyNiche)setCustomQuestions(makeStudyQuiz(studyNiche,n,difficulty));else if(categoryTopic)setCustomQuestions(makeCategoryQuiz(categoryTopic,n,difficulty));}} onDifficulty={d=>{setDifficulty(d);if(studyNiche){setCustomQuestions(makeStudyQuiz(studyNiche,studyCount,d));setQuizSubject(`${nicheInfo[studyNiche].description} · nível ${d}`);}else if(categoryTopic){setCustomQuestions(makeCategoryQuiz(categoryTopic,studyCount,d));setQuizSubject(`${categoryNames[categoryTopic]} · nível ${d}`);}}} onNiche={useStudyNiche} onCategory={useCategoryTopic} onPdf={importPdf} onOriginal={()=>{setStudyNiche("");setCategoryTopic("");setCustomQuestions(null);setPdfName("");setQuizTitle("GiroQuiz");setQuizSubject("Desafio de conhecimento");}} onMusicTrack={setMusicTrackLocal} onMusicScope={setMusicScopeLocal} onBack={()=>setScreen("home")} onCreate={createRoom}/></div>;
+  if(screen==="setup")return <div className="gq"><SetupScreen title={quizTitle} subject={quizSubject} questions={customQuestions} savedQuizzes={savedQuizzes} niche={studyNiche} categoryTopic={categoryTopic} count={studyCount} difficulty={difficulty} pdfName={pdfName} pdfLoading={pdfLoading} loading={loading} error={error} musicTrack={musicTrack} musicScope={musicScope} onTitle={setQuizTitle} onSubject={setQuizSubject} onCount={n=>{setStudyCount(n);if(studyNiche)setCustomQuestions(makeStudyQuiz(studyNiche,n,difficulty));else if(categoryTopic)setCustomQuestions(makeCategoryQuiz(categoryTopic,n,difficulty));}} onDifficulty={d=>{setDifficulty(d);if(studyNiche){setCustomQuestions(makeStudyQuiz(studyNiche,studyCount,d));setQuizSubject(`${nicheInfo[studyNiche].description} · nível ${d}`);}else if(categoryTopic){setCustomQuestions(makeCategoryQuiz(categoryTopic,studyCount,d));setQuizSubject(`${categoryNames[categoryTopic]} · nível ${d}`);}}} onNiche={useStudyNiche} onCategory={useCategoryTopic} onPdf={importPdf} onOriginal={()=>{setStudyNiche("");setCategoryTopic("");setCustomQuestions(null);setPdfName("");setQuizTitle("GiroQuiz");setQuizSubject("Desafio de conhecimento");}} onOpenSaved={openSavedQuiz} onDeleteSaved={deleteSavedQuiz} onMusicTrack={setMusicTrackLocal} onMusicScope={setMusicScopeLocal} onBack={()=>setScreen("home")} onCreate={createRoom}/></div>;
 
   if (screen === "home" || screen === "join") return (
     <div className="gq"><main className="landing">
@@ -255,10 +261,11 @@ export function GiroQuizApp() {
   );
 }
 
-function SetupScreen({title,subject,questions,niche,categoryTopic,count,difficulty,pdfName,pdfLoading,loading,error,musicTrack,musicScope,onTitle,onSubject,onCount,onDifficulty,onNiche,onCategory,onPdf,onOriginal,onMusicTrack,onMusicScope,onBack,onCreate}:{title:string;subject:string;questions:CustomQuestion[]|null;niche:StudyNiche|"";categoryTopic:CategoryTopic|"";count:number;difficulty:Difficulty;pdfName:string;pdfLoading:boolean;loading:boolean;error:string;musicTrack:string;musicScope:MusicScope;onTitle:(v:string)=>void;onSubject:(v:string)=>void;onCount:(v:number)=>void;onDifficulty:(v:Difficulty)=>void;onNiche:(v:StudyNiche)=>void;onCategory:(v:CategoryTopic)=>void;onPdf:(f?:File)=>void;onOriginal:()=>void;onMusicTrack:(id:string)=>void;onMusicScope:(s:MusicScope)=>void;onBack:()=>void;onCreate:()=>void}){
+function SetupScreen({title,subject,questions,savedQuizzes,niche,categoryTopic,count,difficulty,pdfName,pdfLoading,loading,error,musicTrack,musicScope,onTitle,onSubject,onCount,onDifficulty,onNiche,onCategory,onPdf,onOriginal,onOpenSaved,onDeleteSaved,onMusicTrack,onMusicScope,onBack,onCreate}:{title:string;subject:string;questions:CustomQuestion[]|null;savedQuizzes:SavedQuiz[];niche:StudyNiche|"";categoryTopic:CategoryTopic|"";count:number;difficulty:Difficulty;pdfName:string;pdfLoading:boolean;loading:boolean;error:string;musicTrack:string;musicScope:MusicScope;onTitle:(v:string)=>void;onSubject:(v:string)=>void;onCount:(v:number)=>void;onDifficulty:(v:Difficulty)=>void;onNiche:(v:StudyNiche)=>void;onCategory:(v:CategoryTopic)=>void;onPdf:(f?:File)=>void;onOriginal:()=>void;onOpenSaved:(quiz:SavedQuiz)=>void;onDeleteSaved:(id:number)=>void;onMusicTrack:(id:string)=>void;onMusicScope:(s:MusicScope)=>void;onBack:()=>void;onCreate:()=>void}){
  const [category,setCategory]=useState("agro");
  const current=categoryCatalog.find(item=>item.id===category)!;
  return <main className="creatorPage"><a className="gqBrand" href="/"><span className="brandMark">?</span><span className="giroWord">Giro<strong>Quiz</strong></span></a><section className="creatorCard catalogCreator"><button className="back" onClick={onBack}>← Voltar</button><div className="eyebrow">Biblioteca GiroQuiz</div><h1>Escolha o tema da rodada</h1>
+ {savedQuizzes.length>0&&<section className="savedQuizLibrary"><div className="savedQuizHeading"><div><b>Meus quizzes salvos</b><span>Suas perguntas e respostas ficam guardadas automaticamente.</span></div><small>{savedQuizzes.length} salvo{savedQuizzes.length===1?"":"s"}</small></div><div className="savedQuizGrid">{savedQuizzes.map(quiz=><article key={quiz.id}><button className="savedQuizOpen" type="button" onClick={()=>onOpenSaved(quiz)}><small>QUIZ SALVO</small><b>{quiz.title}</b><span>{quiz.subject}</span><em>{quiz.questions.length} perguntas</em></button><button className="savedQuizDelete" type="button" onClick={()=>onDeleteSaved(quiz.id)} aria-label={`Excluir ${quiz.title}`}>×</button></article>)}</div></section>}
  <div className="quizControls"><label>Quantidade<select value={count} onChange={e=>onCount(Number(e.target.value))}><option value={5}>5 perguntas</option><option value={10}>10 perguntas</option></select></label><fieldset><legend>Dificuldade</legend>{(["facil","medio","avancado"] as Difficulty[]).map(level=><button type="button" key={level} className={difficulty===level?"active":""} onClick={()=>onDifficulty(level)}>{level==="facil"?"Fácil":level==="medio"?"Médio":"Avançado"}</button>)}</fieldset></div>
  <section className="catalogSection"><div className="catalogHeading"><div><b>Catálogo de categorias</b><span>Cada categoria possui um banco com 40 perguntas.</span></div><small>Categoria → Subcategoria → Dificuldade</small></div><div className="categoryGrid">{categoryCatalog.map(item=><button type="button" key={item.id} className={`${category===item.id?"active":""} ready`} onClick={()=>{setCategory(item.id);if(item.id==="agro")onOriginal();else onCategory(item.id as CategoryTopic);}}><i>{item.icon}</i><b>{item.name}</b><span>40 perguntas disponíveis</span></button>)}</div>
  <div className="subcategoryPanel"><div><span>Categoria selecionada</span><h2>{current.icon} {current.name}</h2></div>{category==="agro"?<div className="nicheGrid">{(Object.keys(nicheInfo) as StudyNiche[]).map(key=>{const info=nicheInfo[key];return <button type="button" key={key} className={niche===key?"active":""} onClick={()=>onNiche(key)}><i>{info.icon}</i><b>{info.name}</b><span>{info.description}</span></button>})}</div>:<><div className="mixedReady">✓ Quiz misto selecionado: 40 perguntas distribuídas entre os assuntos abaixo</div><div className="subChips">{current.subs.map(sub=><span key={sub}>{sub}</span>)}</div></>}</div></section>

@@ -117,6 +117,18 @@ export const quizConfigs = sqliteTable("quiz_configs", {
   musicScope: text("music_scope").notNull().default("all"),
 });
 
+export const savedQuizzes = sqliteTable("saved_quizzes", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  userId: integer("user_id").notNull().references(() => users.id),
+  title: text("title").notNull(),
+  subject: text("subject").notNull(),
+  questionsJson: text("questions_json").notNull(),
+  musicTrack: text("music_track").notNull().default("tic-tac-quiz"),
+  musicScope: text("music_scope").notNull().default("all"),
+  createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+  updatedAt: text("updated_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+}, table => ({ uniqueUserTitle: uniqueIndex("saved_quiz_user_title").on(table.userId, table.title) }));
+
 export const players = sqliteTable("players", {
   id: integer("id").primaryKey({ autoIncrement: true }),
   roomId: integer("room_id").notNull(),
