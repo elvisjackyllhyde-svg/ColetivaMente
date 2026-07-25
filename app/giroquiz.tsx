@@ -194,13 +194,13 @@ export function GiroQuizApp() {
       <div className="grain" />
       <a className="gqBrand" href="/"><span className="brandMark">?</span><span className="giroWord">Giro<strong>Quiz</strong></span><span className="livePill">AO VIVO</span></a>
       <section className="hero">
-        <div className="eyebrow">Perguntas que giram a diversão</div>
-        <h1>Seu conhecimento<br/><em>entra em movimento.</em></h1>
-        <p>Crie desafios ao vivo, responda rápido e gire o ranking a seu favor. Quanto mais veloz o acerto, maior a pontuação.</p>
+        <div className="eyebrow">AVALIE · REFORCE · COMPROVE O APRENDIZADO</div>
+        <h1>Transforme conteúdo em<br/><em>aprendizado comprovado.</em></h1>
+        <p>Use o GiroQuiz após palestras e treinamentos para medir a retenção, reforçar os pontos-chave e identificar quem realmente absorveu o conteúdo.</p>
         {screen === "home" ? (
           <div className="homeActions">
-            <button className="primary" onClick={startCreating}>Criar sala ao vivo</button>
-            <button className="secondary" onClick={() => setScreen("join")}>Entrar em uma sala</button>
+            <button className="primary" onClick={startCreating}>Criar avaliação ao vivo</button>
+            <button className="secondary" onClick={() => setScreen("join")}>Participar de uma sala</button>
           </div>
         ) : (
           <div className="joinCard">
@@ -216,8 +216,8 @@ export function GiroQuizApp() {
         )}
         {error && <div className="error" role="alert">{error}</div>}
       </section>
-      <div className="scorePreview"><span>+1000</span><small>resposta rápida</small></div>
-      <footer>GiroQuiz · Perguntas ao vivo, tensão e diversão em cada rodada</footer>
+      <div className="scorePreview"><span>+1000</span><small>perguntas</small></div>
+      <footer>GiroQuiz · Avaliação dinâmica para palestras e treinamentos</footer>
     </main></div>
   );
 
