@@ -1,5 +1,6 @@
-import { and, eq } from "drizzle-orm";
+import { and, eq, inArray } from "drizzle-orm";
 import { getDb } from "../../../../db";
+import { getCurrentUser } from "../../../../db/auth";
 import { raffleEntries, raffles, raffleWinnerHistory } from "../../../../db/schema";
 
 export async function GET(request: Request, { params }: { params: Promise<{ slug: string }> }) {
@@ -7,6 +8,18 @@ export async function GET(request: Request, { params }: { params: Promise<{ slug
   const [raffle] = await db.select().from(raffles).where(eq(raffles.slug, slug)).limit(1);
   if (!raffle) return Response.json({ error: "Sorteio não encontrado." }, { status: 404 });
   const isAdmin = url.searchParams.get("admin") === raffle.adminToken;
+  let accountHistory: Array<{ drawId: string; name: string; position: number; drawnAt: string; raffleTitle: string; raffleSlug: string; adminToken: string }> = [];
+  if (isAdmin) {
+    const user = await getCurrentUser(request, db);
+    if (user) {
+      if (!raffle.creatorUserId) await db.update(raffles).set({ creatorUserId: user.id }).where(eq(raffles.id, raffle.id));
+      const ownedRaffles = await db.select().from(raffles).where(eq(raffles.creatorUserId, user.id));
+      const ownedIds = ownedRaffles.map(item => item.id);
+      const allHistory = ownedIds.length ? await db.select().from(raffleWinnerHistory).where(inArray(raffleWinnerHistory.raffleId, ownedIds)).orderBy(raffleWinnerHistory.id) : [];
+      const raffleById = new Map(ownedRaffles.map(item => [item.id, item]));
+      accountHistory = allHistory.map(item => { const owner = raffleById.get(item.raffleId)!; return { drawId: item.drawId, name: item.winnerName, position: item.position, drawnAt: item.drawnAt, raffleTitle: owner.title, raffleSlug: owner.slug, adminToken: owner.adminToken }; });
+    }
+  }
   const entries = await db.select().from(raffleEntries).where(eq(raffleEntries.raffleId, raffle.id)).orderBy(raffleEntries.createdAt);
   const winners = entries.filter(e => e.isWinner).sort((a, b) => (a.winnerPosition ?? 0) - (b.winnerPosition ?? 0));
   const history = isAdmin ? await db.select().from(raffleWinnerHistory).where(eq(raffleWinnerHistory.raffleId, raffle.id)).orderBy(raffleWinnerHistory.id) : [];
@@ -16,6 +29,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ slug
     entries: isAdmin ? entries.map(e => ({ name: e.name, email: e.email.endsWith("@sem-email.local") ? "" : e.email, manual: e.email.endsWith("@sem-email.local"), createdAt: e.createdAt })) : undefined,
     winners: winners.map(w => ({ name: w.name })),
     history: isAdmin ? history.map(h => ({ drawId: h.drawId, name: h.winnerName, position: h.position, drawnAt: h.drawnAt })) : undefined,
+    accountHistory: isAdmin ? accountHistory : undefined,
   });
 }
 

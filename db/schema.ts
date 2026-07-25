@@ -48,6 +48,7 @@ export const raffles = sqliteTable("raffles", {
   id: integer("id").primaryKey({ autoIncrement: true }),
   slug: text("slug").notNull().unique(),
   adminToken: text("admin_token").notNull(),
+  creatorUserId: integer("creator_user_id"),
   title: text("title").notNull(),
   prizeTitle: text("prize_title").notNull().default(""),
   prizeDescription: text("prize_description").notNull().default(""),
