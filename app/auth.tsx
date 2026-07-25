@@ -123,6 +123,7 @@ export function AccountPage() {
       <button className="aBtn primary big" disabled={busy} onClick={subscribe}>{busy ? "Abrindo checkout..." : "Assinar por R$120/mês →"}</button>
     </>}
     {active && <a className="aBtn primary big" href="/">Ir para o painel →</a>}
+    {user.isAdmin && <a className="aBtn secondary big" href="/?modo=admin">Administrar contas</a>}
     <button className="aBtn textMuted" onClick={logout}>Sair da conta</button>
   </section></main></>;
 }

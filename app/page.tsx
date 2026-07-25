@@ -7,6 +7,7 @@ import { RaffleBuilder, RaffleView } from "./raffle";
 import { Field, LinkBox } from "./ui";
 import { AccountPage, AccountStatus, LoginPage, RequireActiveSubscription, SignupPage } from "./auth";
 import { GiroQuizApp } from "./giroquiz";
+import { AdminPage } from "./admin";
 
 type Item={id?:number;name:string;category:string;price:string;votes?:number};
 type Campaign={title:string;question:string;closed:boolean;feedbackOpen:boolean;hideResults:boolean;offerTitle:string;offerDescription:string;offerUrl:string;offerButton:string;isAdmin:boolean};
@@ -29,6 +30,7 @@ export default function Home(){
   if(params.mode==="login")return <LoginPage/>;
   if(params.mode==="signup")return <SignupPage/>;
   if(params.mode==="conta")return <AccountPage/>;
+  if(params.mode==="admin")return <AdminPage/>;
   if(params.mode==="voto")return <RequireActiveSubscription><Builder/></RequireActiveSubscription>;
   if(params.mode==="sorteio")return <RequireActiveSubscription><RaffleBuilder/></RequireActiveSubscription>;
   if(params.mode==="quiz")return <GiroQuizApp/>;

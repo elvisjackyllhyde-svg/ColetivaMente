@@ -86,6 +86,7 @@ export const users = sqliteTable("users", {
   subscriptionStatus: text("subscription_status").notNull().default("inactive"),
   subscriptionExpiresAt: text("subscription_expires_at"),
   mpSubscriptionId: text("mp_subscription_id").notNull().default(""),
+  totalPaidCents: integer("total_paid_cents").notNull().default(0),
   isAdmin: integer("is_admin", { mode: "boolean" }).notNull().default(false),
   createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
 });
