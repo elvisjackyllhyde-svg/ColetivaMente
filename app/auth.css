@@ -7,6 +7,7 @@
 .aCard h1{font:800 clamp(24px,4vw,32px)/1.1 sans-serif;margin:14px 0 18px;letter-spacing:-.02em}
 .aMuted{color:#5b6270;font-size:14px;line-height:1.55;margin-bottom:18px}
 .aAlert{background:#fff2d6;border:1px solid #e5c77f;color:#754f08;padding:12px 15px;border-radius:10px;margin-bottom:15px;font-size:13px}
+.aPaymentNotice{background:#e9fbf2;border:1px solid #a8dfc5;color:#126344;padding:12px 15px;border-radius:10px;margin-bottom:15px;font-size:13px;line-height:1.45}
 .aFields{display:grid;gap:14px;text-align:left;margin:20px 0}
 .aBtn{display:inline-block;width:100%;border:1px solid transparent;border-radius:10px;padding:12px 18px;font-weight:700;text-decoration:none;text-align:center;cursor:pointer;font-size:14px;box-sizing:border-box}
 .aBtn.primary{background:linear-gradient(135deg,#7c6bff,#4338ca);color:#fff;box-shadow:0 10px 26px #4338ca30}

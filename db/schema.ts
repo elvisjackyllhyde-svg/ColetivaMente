@@ -98,6 +98,21 @@ export const sessions = sqliteTable("sessions", {
   createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
 });
 
+export const payments = sqliteTable("payments", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  userId: integer("user_id").notNull().references(() => users.id),
+  provider: text("provider").notNull().default("mercado_pago"),
+  externalReference: text("external_reference").notNull().unique(),
+  providerPreferenceId: text("provider_preference_id").notNull().default(""),
+  providerPaymentId: text("provider_payment_id").notNull().default(""),
+  amountCents: integer("amount_cents").notNull(),
+  currency: text("currency").notNull().default("BRL"),
+  status: text("status").notNull().default("created"),
+  approvedAt: text("approved_at"),
+  createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+  updatedAt: text("updated_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+});
+
 export const rooms = sqliteTable("rooms", {
   id: integer("id").primaryKey({ autoIncrement: true }),
   code: text("code").notNull().unique(),

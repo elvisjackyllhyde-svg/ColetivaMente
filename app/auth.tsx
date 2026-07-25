@@ -95,6 +95,15 @@ export function SignupPage() {
 export function AccountPage() {
   const { user, loading, reload } = useAuth();
   const [busy, setBusy] = useState(false);
+  const [paymentMessage, setPaymentMessage] = useState("");
+
+  useEffect(() => {
+    const params = new URLSearchParams(location.search), result = params.get("pagamento"), paymentId = params.get("payment_id");
+    if (!result) return;
+    if (result === "failure") { setPaymentMessage("O pagamento não foi concluído. Você pode tentar novamente."); return; }
+    if (result === "pending") { setPaymentMessage("Pagamento em análise. O acesso será liberado automaticamente após a aprovação."); return; }
+    if (result === "success" && paymentId) fetch(`/api/billing/status?payment_id=${encodeURIComponent(paymentId)}`, { cache: "no-store" }).then(r => r.json()).then(data => { if (data.status === "approved") { setPaymentMessage("Pagamento aprovado! Seus 30 dias de acesso foram liberados."); reload(); } else setPaymentMessage("Pagamento recebido e em confirmação. Atualize esta página em alguns instantes."); }).catch(() => setPaymentMessage("Pagamento recebido e em confirmação."));
+  }, []);
 
   const logout = async () => { await fetch("/api/auth/logout", { method: "POST" }); location.href = "/"; };
   const subscribe = async () => {
@@ -115,14 +124,16 @@ export function AccountPage() {
   const active = user.isAdmin || (days !== null && days > 0);
   return <><AuthHeader /><main className="aCenter"><section className="aCard">
     <p className="aEyebrow">MINHA CONTA</p><h1>Olá, {user.name.split(" ")[0]}</h1>
+    {paymentMessage && <div className="aPaymentNotice">{paymentMessage}</div>}
     <div className="aStatusRow"><span>PLANO</span><b className={active ? "aActive" : "aInactive"}>{user.isAdmin ? "Admin — acesso total" : lifetime ? "Plano vitalício" : active ? "Assinatura ativa" : "Sem assinatura"}</b></div>
     {!user.isAdmin && <div className="aStatusRow"><span>DISPONIBILIDADE</span><b className={active ? "aActive" : "aInactive"}>{lifetime ? "Acesso vitalício" : active ? `${days} dias restantes` : "Acesso expirado"}</b></div>}
     <div className="aStatusRow"><span>E-MAIL</span><b>{user.email}</b></div>
     {!active && <>
-      <p className="aMuted">Assine por R$120/mês para criar GiroQuiz, pesquisas e sorteios ilimitados para sua equipe.</p>
-      <button className="aBtn primary big" disabled={busy} onClick={subscribe}>{busy ? "Abrindo checkout..." : "Assinar por R$120/mês →"}</button>
+      <p className="aMuted">Adquira 30 dias de acesso por R$ 120 para criar GiroQuiz, pesquisas e sorteios ilimitados para sua equipe.</p>
+      <button className="aBtn primary big" disabled={busy} onClick={subscribe}>{busy ? "Abrindo Mercado Pago..." : "Pagar R$ 120 com Mercado Pago →"}</button>
     </>}
     {active && <a className="aBtn primary big" href="/">Ir para o painel →</a>}
+    {active && !user.isAdmin && !lifetime && <button className="aBtn secondary big" disabled={busy} onClick={subscribe}>{busy ? "Abrindo Mercado Pago..." : "Adicionar mais 30 dias"}</button>}
     {user.isAdmin && <a className="aBtn secondary big" href="/?modo=admin">Administrar contas</a>}
     <button className="aBtn textMuted" onClick={logout}>Sair da conta</button>
   </section></main></>;
