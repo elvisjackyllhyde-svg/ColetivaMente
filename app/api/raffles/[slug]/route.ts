@@ -12,7 +12,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ slug
   return Response.json({
     raffle: { title: raffle.title, prizeTitle: raffle.prizeTitle, prizeDescription: raffle.prizeDescription, winnersCount: raffle.winnersCount, closed: raffle.closed, isAdmin },
     entryCount: entries.length,
-    entries: isAdmin ? entries.map(e => ({ name: e.name, email: e.email, createdAt: e.createdAt })) : undefined,
+    entries: isAdmin ? entries.map(e => ({ name: e.name, email: e.email.endsWith("@sem-email.local") ? "" : e.email, manual: e.email.endsWith("@sem-email.local"), createdAt: e.createdAt })) : undefined,
     winners: winners.map(w => ({ name: w.name })),
   });
 }

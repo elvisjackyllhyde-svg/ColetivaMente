@@ -32,7 +32,14 @@
 .rEntryTable{display:grid;gap:8px;max-height:340px;overflow:auto}
 .rEntryRow{display:flex;justify-content:space-between;gap:12px;padding:10px 12px;background:#faf9fc;border:1px solid #eeedf5;border-radius:10px;font-size:13px}
 .rEntryRow small{color:#8a8f9c}
+.rManualPanel{display:flex;align-items:center;justify-content:space-between;gap:24px}
+.rManualPanel h2{font:800 18px sans-serif;margin:4px 0 5px}
+.rManualPanel p{margin:0;color:#6e7280;font-size:13px}
+.rManualForm{display:flex;gap:10px;min-width:min(100%,460px)}
+.rManualForm input{flex:1;min-width:0;border:1px solid #dedde8;border-radius:10px;padding:12px 14px;font:500 14px sans-serif;outline:none;background:#faf9fc}
+.rManualForm input:focus{border-color:#ef7527;box-shadow:0 0 0 3px #ef752718}
 .rEntryFields{display:grid;gap:14px;text-align:left;margin:22px 0}
+@media(max-width:700px){.rManualPanel{align-items:stretch;flex-direction:column}.rManualForm{min-width:0;width:100%;flex-direction:column}.rEntryRow{align-items:flex-start;flex-direction:column;gap:4px}}
 .rLoader{width:42px;height:42px;border:4px solid #eeedf5;border-top-color:#d94f0e;border-radius:50%;animation:rSpin 1s linear infinite}
 @keyframes rSpin{to{transform:rotate(360deg)}}
 .rAdmin .rHero{padding-top:36px}

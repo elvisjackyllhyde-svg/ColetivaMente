@@ -4,7 +4,7 @@ import "./raffle.css";
 import { Field, LinkBox } from "./ui";
 
 type RaffleInfo = { title: string; prizeTitle: string; prizeDescription: string; winnersCount: number; closed: boolean; isAdmin: boolean };
-type Entry = { name: string; email: string; createdAt: string };
+type Entry = { name: string; email: string; manual?: boolean; createdAt: string };
 type Winner = { name: string };
 
 function RaffleHeader({ title = "Sorteio" }: { title?: string }) {
@@ -63,6 +63,7 @@ export function RaffleView({ slug, admin }: { slug: string; admin: string }) {
   const [entered, setEntered] = useState(false);
   const [name, setName] = useState(""); const [email, setEmail] = useState("");
   const [busy, setBusy] = useState(false); const [drawing, setDrawing] = useState(false);
+  const [manualName, setManualName] = useState(""); const [addingManual, setAddingManual] = useState(false);
   const [suspense, setSuspense] = useState(false); const [spinName, setSpinName] = useState("");
   const suspenseRef = useRef(false);
 
@@ -104,6 +105,16 @@ export function RaffleView({ slug, admin }: { slug: string; admin: string }) {
     await fetch(`/api/raffles/${slug}`, { method: "PATCH", headers: { "content-type": "application/json" }, body: JSON.stringify({ adminToken: admin, action: "reset" }) });
     load();
   };
+  const addManual = async () => {
+    setAddingManual(true); setError("");
+    try {
+      const r = await fetch(`/api/raffles/${slug}/manual`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ name: manualName, adminToken: admin }) });
+      const d = await r.json();
+      if (!r.ok) throw new Error(d.error);
+      setManualName(""); await load();
+    } catch (e) { setError(e instanceof Error ? e.message : "Não foi possível adicionar o participante."); }
+    finally { setAddingManual(false); }
+  };
 
   if (error && !info) return <main className="rCenter"><section className="rSuccess"><h1>Não foi possível abrir</h1><p>{error}</p></section></main>;
   if (!info) return <main className="rCenter"><div className="rLoader" /></main>;
@@ -118,7 +129,8 @@ export function RaffleView({ slug, admin }: { slug: string; admin: string }) {
         : winners.length === 0
         ? <section className="rLaunch"><button className="rBtn primary big" disabled={drawing || entryCount === 0} onClick={draw}>{drawing ? "Sorteando..." : "🎲 Sortear vencedores"}</button>{entryCount === 0 && <small className="rHint">Aguardando participantes se inscreverem pelo link.</small>}</section>
         : <section className="rWinners">{winners.map((w, i) => <div className="rWinnerCard" key={w.name + i} style={{ animationDelay: `${i * 0.12}s` }}><span>{i + 1}</span><strong>{w.name}</strong></div>)}<button className="rBtn secondary" onClick={reset}>↻ Sortear novamente</button></section>}
-      <section className="rPanel rEntryList"><h2>Participantes ({entries.length})</h2><div className="rEntryTable">{entries.map(e => <div className="rEntryRow" key={e.email}><span>{e.name}</span><small>{e.email}</small></div>)}</div></section>
+      <section className="rPanel rManualPanel"><div><p className="rEyebrow">CADASTRO MANUAL</p><h2>Adicionar participante sem e-mail</h2><p>Inclua pessoas que não conseguem se inscrever pelo celular.</p></div><div className="rManualForm"><input value={manualName} onChange={e => setManualName(e.target.value)} onKeyDown={e => { if (e.key === "Enter" && manualName.trim().length >= 2) addManual(); }} placeholder="Nome do participante" maxLength={80} /><button className="rBtn primary" disabled={addingManual || manualName.trim().length < 2 || info.closed} onClick={addManual}>{addingManual ? "Adicionando..." : "+ Adicionar"}</button></div>{info.closed && <small className="rHint">Reabra o sorteio para adicionar novos participantes.</small>}</section>
+      <section className="rPanel rEntryList"><h2>Participantes ({entries.length})</h2><div className="rEntryTable">{entries.map((e, i) => <div className="rEntryRow" key={`${e.email}-${e.name}-${i}`}><span>{e.name}</span><small>{e.manual ? "Adicionado manualmente" : e.email}</small></div>)}</div></section>
     </main><RaffleFooter /></>;
   }
 
