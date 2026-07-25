@@ -9,7 +9,7 @@ type Winner = { name: string };
 type HistoryWinner = { drawId: string; name: string; position: number; drawnAt: string };
 
 function RaffleHeader({ title = "Sorteio" }: { title?: string }) {
-  return <header className="rHeader"><a className="rBrand" href="/"><span>C</span><div><strong>{title}</strong><small>SORTEIO CORPORATIVO</small></div></a></header>;
+  return <header className="rHeader"><a className="rBrand" href="/"><span className="rBrandMark" aria-hidden="true"><svg viewBox="0 0 48 48"><path d="M16 10h16v7c0 7-3.6 11.5-8 11.5S16 24 16 17v-7Z"/><path d="M16 14h-5v3c0 4 2.4 7 6.2 7.7M32 14h5v3c0 4-2.4 7-6.2 7.7M24 29v6M17 39h14M20 35h8"/><path className="rSpark" d="m37.5 7 .8 2.2 2.2.8-2.2.8-.8 2.2-.8-2.2-2.2-.8 2.2-.8.8-2.2ZM10 27l.7 1.8 1.8.7-1.8.7L10 32l-.7-1.8-1.8-.7 1.8-.7L10 27Z"/></svg></span><div><strong>{title}</strong><small>SORTEIO CORPORATIVO</small></div></a></header>;
 }
 function RaffleFooter() {
   return <footer className="rFooter">ColetivaMente · Dinâmicas que aproximam equipes</footer>;
