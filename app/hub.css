@@ -18,3 +18,4 @@
 @media(max-width:980px){.experienceGrid{grid-template-columns:1fr}.hub{height:auto;min-height:100dvh;overflow:visible}}
 @media(max-width:760px){.hub{padding:0 16px;height:auto;min-height:100dvh;overflow:visible}.hubNav{height:74px}.hubNav>b{display:none}.hubHero{padding:36px 3px 26px}.hubHero h1{font-size:36px}.hubHero>p:last-child{font-size:14px}.experienceCard{min-height:auto;padding:24px}.experienceCard p{-webkit-line-clamp:initial}.hubFooter{flex-direction:column;gap:7px;text-align:center;padding:22px 0 28px}}
 @media(prefers-reduced-motion:reduce){.hubGlow,.hubHero,.hub:after,.experienceCard,.hubBrand:before,.hubBrand:after{animation:none}.hub:after,.hubBrand:before,.hubBrand:after{display:none}.experienceCard,.experienceAction span{transition:none}}
+.hubNav>b{display:none!important}
