@@ -66,6 +66,16 @@ export const raffleEntries = sqliteTable("raffle_entries", {
   createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
 }, table => ({ uniqueEmail: uniqueIndex("one_email_per_raffle").on(table.raffleId, table.email) }));
 
+export const raffleWinnerHistory = sqliteTable("raffle_winner_history", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  raffleId: integer("raffle_id").notNull().references(() => raffles.id),
+  drawId: text("draw_id").notNull(),
+  entryId: integer("entry_id").references(() => raffleEntries.id),
+  winnerName: text("winner_name").notNull(),
+  position: integer("position").notNull(),
+  drawnAt: text("drawn_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+});
+
 export const users = sqliteTable("users", {
   id: integer("id").primaryKey({ autoIncrement: true }),
   email: text("email").notNull().unique(),

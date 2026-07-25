@@ -1,6 +1,6 @@
 import { and, eq } from "drizzle-orm";
 import { getDb } from "../../../../db";
-import { raffleEntries, raffles } from "../../../../db/schema";
+import { raffleEntries, raffles, raffleWinnerHistory } from "../../../../db/schema";
 
 export async function GET(request: Request, { params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params; const url = new URL(request.url); const db = getDb();
@@ -9,11 +9,13 @@ export async function GET(request: Request, { params }: { params: Promise<{ slug
   const isAdmin = url.searchParams.get("admin") === raffle.adminToken;
   const entries = await db.select().from(raffleEntries).where(eq(raffleEntries.raffleId, raffle.id)).orderBy(raffleEntries.createdAt);
   const winners = entries.filter(e => e.isWinner).sort((a, b) => (a.winnerPosition ?? 0) - (b.winnerPosition ?? 0));
+  const history = isAdmin ? await db.select().from(raffleWinnerHistory).where(eq(raffleWinnerHistory.raffleId, raffle.id)).orderBy(raffleWinnerHistory.id) : [];
   return Response.json({
     raffle: { title: raffle.title, prizeTitle: raffle.prizeTitle, prizeDescription: raffle.prizeDescription, winnersCount: raffle.winnersCount, closed: raffle.closed, isAdmin },
     entryCount: entries.length,
     entries: isAdmin ? entries.map(e => ({ name: e.name, email: e.email.endsWith("@sem-email.local") ? "" : e.email, manual: e.email.endsWith("@sem-email.local"), createdAt: e.createdAt })) : undefined,
     winners: winners.map(w => ({ name: w.name })),
+    history: isAdmin ? history.map(h => ({ drawId: h.drawId, name: h.winnerName, position: h.position, drawnAt: h.drawnAt })) : undefined,
   });
 }
 
@@ -26,8 +28,10 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ sl
     if (entries.length === 0) return Response.json({ error: "Ainda não há participantes inscritos." }, { status: 400 });
     const shuffled = [...entries].sort(() => Math.random() - 0.5);
     const picked = shuffled.slice(0, Math.min(raffle.winnersCount, entries.length));
+    const drawId = crypto.randomUUID();
     for (let i = 0; i < picked.length; i++) {
       await db.update(raffleEntries).set({ isWinner: true, winnerPosition: i }).where(eq(raffleEntries.id, picked[i].id));
+      await db.insert(raffleWinnerHistory).values({ raffleId: raffle.id, drawId, entryId: picked[i].id, winnerName: picked[i].name, position: i });
     }
     await db.update(raffles).set({ closed: true }).where(eq(raffles.id, raffle.id));
   }

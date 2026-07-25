@@ -6,6 +6,7 @@ import { Field, LinkBox } from "./ui";
 type RaffleInfo = { title: string; prizeTitle: string; prizeDescription: string; winnersCount: number; closed: boolean; isAdmin: boolean };
 type Entry = { name: string; email: string; manual?: boolean; createdAt: string };
 type Winner = { name: string };
+type HistoryWinner = { drawId: string; name: string; position: number; drawnAt: string };
 
 function RaffleHeader({ title = "Sorteio" }: { title?: string }) {
   return <header className="rHeader"><a className="rBrand" href="/"><span>C</span><div><strong>{title}</strong><small>SORTEIO CORPORATIVO</small></div></a></header>;
@@ -59,6 +60,7 @@ export function RaffleView({ slug, admin }: { slug: string; admin: string }) {
   const [entryCount, setEntryCount] = useState(0);
   const [entries, setEntries] = useState<Entry[]>([]);
   const [winners, setWinners] = useState<Winner[]>([]);
+  const [history, setHistory] = useState<HistoryWinner[]>([]);
   const [error, setError] = useState("");
   const [entered, setEntered] = useState(false);
   const [name, setName] = useState(""); const [email, setEmail] = useState("");
@@ -70,7 +72,7 @@ export function RaffleView({ slug, admin }: { slug: string; admin: string }) {
   const load = useCallback(async () => {
     const r = await fetch(`/api/raffles/${encodeURIComponent(slug)}${admin ? `?admin=${encodeURIComponent(admin)}` : ""}`, { cache: "no-store" });
     const d = await r.json();
-    if (r.ok) { setInfo(d.raffle); setEntryCount(d.entryCount); setEntries(d.entries || []); if (!suspenseRef.current) setWinners(d.winners || []); }
+    if (r.ok) { setInfo(d.raffle); setEntryCount(d.entryCount); setEntries(d.entries || []); setHistory(d.history || []); if (!suspenseRef.current) setWinners(d.winners || []); }
     else setError(d.error);
   }, [slug, admin]);
   useEffect(() => { load(); const t = setInterval(load, 5000); return () => clearInterval(t); }, [load]);
@@ -120,6 +122,7 @@ export function RaffleView({ slug, admin }: { slug: string; admin: string }) {
   if (!info) return <main className="rCenter"><div className="rLoader" /></main>;
 
   if (info.isAdmin) {
+    const historyRounds = Array.from(history.reduce((groups, item) => { const group = groups.get(item.drawId) || []; group.push(item); groups.set(item.drawId, group); return groups; }, new Map<string, HistoryWinner[]>()).values()).reverse();
     return <><RaffleHeader title={info.title} /><main className="rContainer rAdmin">
       <div className="rHero"><p className="rEyebrow">PAINEL DO SORTEIO</p><h1>{info.title}</h1><p>{info.prizeTitle} · {info.winnersCount} ganhador{info.winnersCount > 1 ? "es" : ""}</p></div>
       <section className="rKpis"><article><span>INSCRITOS</span><strong>{entryCount}</strong></article><article><span>GANHADORES</span><strong>{winners.length || info.winnersCount}</strong></article></section>
@@ -131,6 +134,7 @@ export function RaffleView({ slug, admin }: { slug: string; admin: string }) {
         : <section className="rWinners">{winners.map((w, i) => <div className="rWinnerCard" key={w.name + i} style={{ animationDelay: `${i * 0.12}s` }}><span>{i + 1}</span><strong>{w.name}</strong></div>)}<button className="rBtn secondary" onClick={reset}>↻ Sortear novamente</button></section>}
       <section className="rPanel rManualPanel"><div><p className="rEyebrow">CADASTRO MANUAL</p><h2>Adicionar participante sem e-mail</h2><p>Inclua pessoas que não conseguem se inscrever pelo celular.</p></div><div className="rManualForm"><input value={manualName} onChange={e => setManualName(e.target.value)} onKeyDown={e => { if (e.key === "Enter" && manualName.trim().length >= 2) addManual(); }} placeholder="Nome do participante" maxLength={80} /><button className="rBtn primary" disabled={addingManual || manualName.trim().length < 2 || info.closed} onClick={addManual}>{addingManual ? "Adicionando..." : "+ Adicionar"}</button></div>{info.closed && <small className="rHint">Reabra o sorteio para adicionar novos participantes.</small>}</section>
       <section className="rPanel rEntryList"><h2>Participantes ({entries.length})</h2><div className="rEntryTable">{entries.map((e, i) => <div className="rEntryRow" key={`${e.email}-${e.name}-${i}`}><span>{e.name}</span><small>{e.manual ? "Adicionado manualmente" : e.email}</small></div>)}</div></section>
+      <section className="rPanel rHistory"><div className="rHistoryHead"><div><p className="rEyebrow">REGISTRO DO SORTEIO</p><h2>Histórico de ganhadores</h2></div><strong>{historyRounds.length} rodada{historyRounds.length !== 1 ? "s" : ""}</strong></div>{historyRounds.length === 0 ? <p className="rHistoryEmpty">O histórico aparecerá aqui depois do primeiro sorteio.</p> : <div className="rHistoryRounds">{historyRounds.map((round, roundIndex) => { const raw = round[0].drawnAt; const date = new Date(raw.includes("T") ? raw : `${raw.replace(" ", "T")}Z`); return <article className="rHistoryRound" key={round[0].drawId}><header><span>Rodada {historyRounds.length - roundIndex}</span><time>{date.toLocaleDateString("pt-BR")} às {date.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}</time></header><div>{[...round].sort((a,b) => a.position - b.position).map(w => <p key={`${w.drawId}-${w.position}`}><i>{w.position + 1}</i><strong>{w.name}</strong></p>)}</div></article>; })}</div>}</section>
     </main><RaffleFooter /></>;
   }
 
