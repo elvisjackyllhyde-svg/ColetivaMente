@@ -6,7 +6,7 @@ import { getCurrentUser } from "../../../db/auth";
 export async function POST(req:Request) {
   const user=await getCurrentUser(req,getDb());
   if(!user)return Response.json({error:"Entre na sua conta para criar uma partida."},{status:401});
-  if(!user.isAdmin&&(user.subscriptionStatus!=="active"||!user.subscriptionExpiresAt||Date.parse(user.subscriptionExpiresAt)<=Date.now()))return Response.json({error:"É necessário ter uma assinatura ativa para criar uma partida."},{status:403});
+  if(!user.isAdmin&&user.subscriptionStatus!=="lifetime"&&(user.subscriptionStatus!=="active"||!user.subscriptionExpiresAt||Date.parse(user.subscriptionExpiresAt)<=Date.now()))return Response.json({error:"É necessário ter uma assinatura ativa para criar uma partida."},{status:403});
   const d1=db(); const now=Date.now(); const hostKey=crypto.randomUUID();
   const body=await req.json().catch(()=>({})) as {title?:string;subject?:string;questions?:unknown;musicTrack?:string;musicScope?:string}; const title=(body.title||"GiroQuiz").trim().slice(0,80),subject=(body.subject||"Desafio de conhecimento").trim().slice(0,100); const custom=body.questions===undefined?null:validateQuestions(body.questions); if(body.questions!==undefined&&!custom)return Response.json({error:"Las preguntas importadas no son válidas."},{status:400});
   const musicTrack=musicTracks.some(t=>t.id===body.musicTrack)?body.musicTrack!:defaultMusicTrack;

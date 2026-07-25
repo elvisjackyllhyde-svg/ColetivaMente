@@ -12,7 +12,7 @@ export async function POST(request: Request) {
     const db = getDb();
     const user = await getCurrentUser(request, db);
     if (!user) return Response.json({ error: "Entre na sua conta para criar uma pesquisa." }, { status: 401 });
-    if (!user.isAdmin && (user.subscriptionStatus !== "active" || !user.subscriptionExpiresAt || Date.parse(user.subscriptionExpiresAt) <= Date.now())) return Response.json({ error: "É necessário ter uma assinatura ativa para criar uma pesquisa." }, { status: 403 });
+    if (!user.isAdmin && user.subscriptionStatus !== "lifetime" && (user.subscriptionStatus !== "active" || !user.subscriptionExpiresAt || Date.parse(user.subscriptionExpiresAt) <= Date.now())) return Response.json({ error: "É necessário ter uma assinatura ativa para criar uma pesquisa." }, { status: 403 });
     const body = await request.json() as Record<string, unknown>;
     const title = String(body.title || "").trim().slice(0, 80);
     const question = String(body.question || "").trim().slice(0, 180);
