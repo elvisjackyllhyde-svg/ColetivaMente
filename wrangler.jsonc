@@ -1,4 +1,11 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
-  "name": "coletivamente"
+  "name": "coletivamente",
+  "workers_dev": true,
+  "routes": [
+    {
+      "pattern": "coletivamente.app",
+      "custom_domain": true
+    }
+  ]
 }
