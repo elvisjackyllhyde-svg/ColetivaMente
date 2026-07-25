@@ -69,6 +69,8 @@ export function RaffleView({ slug, admin }: { slug: string; admin: string }) {
   const [busy, setBusy] = useState(false); const [drawing, setDrawing] = useState(false);
   const [manualName, setManualName] = useState(""); const [addingManual, setAddingManual] = useState(false);
   const [sharedDraw, setSharedDraw] = useState("");
+  const [sharePayload, setSharePayload] = useState<{ title: string; text: string } | null>(null);
+  const [shareCopied, setShareCopied] = useState(false);
   const [suspense, setSuspense] = useState(false); const [spinName, setSpinName] = useState("");
   const suspenseRef = useRef(false);
 
@@ -131,6 +133,22 @@ export function RaffleView({ slug, admin }: { slug: string; admin: string }) {
       else { await navigator.clipboard.writeText(text); setSharedDraw(ordered[0].drawId); setTimeout(() => setSharedDraw(""), 2200); }
     } catch { /* compartilhamento cancelado */ }
   };
+  const openShareRound = (round: AccountHistoryWinner[]) => {
+    const ordered = [...round].sort((a, b) => a.position - b.position);
+    const raw = ordered[0].drawnAt;
+    const date = new Date(raw.includes("T") ? raw : `${raw.replace(" ", "T")}Z`);
+    const number = drawNumber(ordered[0].drawId);
+    const text = ["🎉 RESULTADO DO SORTEIO", ordered[0].raffleTitle, `Número: ${number}`, `Data: ${date.toLocaleDateString("pt-BR")} às ${date.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}`, "", ...ordered.map((winner, index) => `${index + 1}º — ${winner.name}`), "", "Sorteio realizado pela ColetivaMente"].join("\n");
+    setShareCopied(false); setSharePayload({ title: `Resultado ${number}`, text });
+  };
+  const copyShare = async () => {
+    if (!sharePayload) return;
+    await navigator.clipboard.writeText(sharePayload.text); setShareCopied(true);
+  };
+  const nativeShare = async () => {
+    if (!sharePayload || !navigator.share) return;
+    try { await navigator.share(sharePayload); } catch { /* compartilhamento cancelado */ }
+  };
 
   if (error && !info) return <main className="rCenter"><section className="rSuccess"><h1>Não foi possível abrir</h1><p>{error}</p></section></main>;
   if (!info) return <main className="rCenter"><div className="rLoader" /></main>;
@@ -147,11 +165,11 @@ export function RaffleView({ slug, admin }: { slug: string; admin: string }) {
         ? <section className="rSuspense"><p className="rEyebrow">SORTEANDO...</p><div className="rSpinName">{spinName}</div></section>
         : winners.length === 0
         ? <section className="rLaunch"><button className="rBtn primary big" disabled={drawing || entryCount === 0} onClick={draw}>{drawing ? "Sorteando..." : "🎲 Sortear vencedores"}</button>{entryCount === 0 && <small className="rHint">Aguardando participantes se inscreverem pelo link.</small>}</section>
-        : <section className="rWinners">{latestCurrentRound && <div className="rDrawReceipt"><span>NÚMERO DO SORTEIO</span><strong>{drawNumber(latestCurrentRound[0].drawId)}</strong></div>}{winners.map((w, i) => <div className="rWinnerCard" key={w.name + i} style={{ animationDelay: `${i * 0.12}s` }}><span>{i + 1}</span><strong>{w.name}</strong></div>)}<div className="rWinnerActions">{latestCurrentRound && <button className="rBtn share" onClick={() => shareRound(latestCurrentRound)}>↗ Compartilhar ganhador{winners.length > 1 ? "es" : ""}</button>}<button className="rBtn secondary" onClick={reset}>↻ Sortear novamente</button></div></section>}
+        : <section className="rWinners">{latestCurrentRound && <div className="rDrawReceipt"><span>NÚMERO DO SORTEIO</span><strong>{drawNumber(latestCurrentRound[0].drawId)}</strong></div>}{winners.map((w, i) => <div className="rWinnerCard" key={w.name + i} style={{ animationDelay: `${i * 0.12}s` }}><span>{i + 1}</span><strong>{w.name}</strong></div>)}<div className="rWinnerActions">{latestCurrentRound && <button className="rBtn share" onClick={() => openShareRound(latestCurrentRound)}>↗ Compartilhar ganhador{winners.length > 1 ? "es" : ""}</button>}<button className="rBtn secondary" onClick={reset}>↻ Sortear novamente</button></div></section>}
       <section className="rPanel rManualPanel"><div><p className="rEyebrow">CADASTRO MANUAL</p><h2>Adicionar participante sem e-mail</h2><p>Inclua pessoas que não conseguem se inscrever pelo celular.</p></div><div className="rManualForm"><input value={manualName} onChange={e => setManualName(e.target.value)} onKeyDown={e => { if (e.key === "Enter" && manualName.trim().length >= 2) addManual(); }} placeholder="Nome do participante" maxLength={80} /><button className="rBtn primary" disabled={addingManual || manualName.trim().length < 2 || info.closed} onClick={addManual}>{addingManual ? "Adicionando..." : "+ Adicionar"}</button></div>{info.closed && <small className="rHint">Reabra o sorteio para adicionar novos participantes.</small>}</section>
       <section className="rPanel rEntryList"><h2>Participantes ({entries.length})</h2><div className="rEntryTable">{entries.map((e, i) => <div className="rEntryRow" key={`${e.email}-${e.name}-${i}`}><span>{e.name}</span><small>{e.manual ? "Adicionado manualmente" : e.email}</small></div>)}</div></section>
-      <section className="rPanel rHistory"><div className="rHistoryHead"><div><p className="rEyebrow">REGISTRO DA SUA CONTA</p><h2>Histórico de ganhadores</h2></div><strong>{historyRounds.length} rodada{historyRounds.length !== 1 ? "s" : ""}</strong></div>{historyRounds.length === 0 ? <p className="rHistoryEmpty">O histórico aparecerá aqui depois do primeiro sorteio.</p> : <div className="rHistoryRounds">{historyRounds.map(round => { const raw = round[0].drawnAt; const date = new Date(raw.includes("T") ? raw : `${raw.replace(" ", "T")}Z`); return <article className="rHistoryRound" key={`${round[0].raffleSlug}-${round[0].drawId}`}><header><span>{round[0].raffleTitle}</span><time>{date.toLocaleDateString("pt-BR")} às {date.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}</time></header><div className="rHistoryNumber"><small>NÚMERO DO SORTEIO</small><strong>{drawNumber(round[0].drawId)}</strong></div><div>{[...round].sort((a,b) => a.position - b.position).map(w => <p key={`${w.drawId}-${w.position}`}><i>{w.position + 1}</i><strong>{w.name}</strong></p>)}</div><div className="rHistoryActions"><button onClick={() => shareRound(round)}>{sharedDraw === round[0].drawId ? "✓ Resultado copiado!" : "↗ Compartilhar resultado"}</button><a href={`?r=${encodeURIComponent(round[0].raffleSlug)}&admin=${encodeURIComponent(round[0].adminToken)}`}>Abrir painel →</a></div></article>; })}</div>}</section>
-    </main><RaffleFooter /></>;
+      <section className="rPanel rHistory"><div className="rHistoryHead"><div><p className="rEyebrow">REGISTRO DA SUA CONTA</p><h2>Histórico de ganhadores</h2></div><strong>{historyRounds.length} rodada{historyRounds.length !== 1 ? "s" : ""}</strong></div>{historyRounds.length === 0 ? <p className="rHistoryEmpty">O histórico aparecerá aqui depois do primeiro sorteio.</p> : <div className="rHistoryRounds">{historyRounds.map(round => { const raw = round[0].drawnAt; const date = new Date(raw.includes("T") ? raw : `${raw.replace(" ", "T")}Z`); return <article className="rHistoryRound" key={`${round[0].raffleSlug}-${round[0].drawId}`}><header><span>{round[0].raffleTitle}</span><time>{date.toLocaleDateString("pt-BR")} às {date.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}</time></header><div className="rHistoryNumber"><small>NÚMERO DO SORTEIO</small><strong>{drawNumber(round[0].drawId)}</strong></div><div>{[...round].sort((a,b) => a.position - b.position).map(w => <p key={`${w.drawId}-${w.position}`}><i>{w.position + 1}</i><strong>{w.name}</strong></p>)}</div><div className="rHistoryActions"><button onClick={() => openShareRound(round)}>↗ Compartilhar resultado</button><a href={`?r=${encodeURIComponent(round[0].raffleSlug)}&admin=${encodeURIComponent(round[0].adminToken)}`}>Abrir painel →</a></div></article>; })}</div>}</section>
+    </main>{sharePayload && <div className="rShareOverlay" onMouseDown={event => { if (event.target === event.currentTarget) setSharePayload(null); }}><section className="rShareModal" role="dialog" aria-modal="true" aria-label="Compartilhar resultado"><button className="rShareClose" onClick={() => setSharePayload(null)} aria-label="Fechar">×</button><p className="rEyebrow">COMPARTILHAR</p><h2>Envie o resultado</h2><p>Escolha uma plataforma ou copie o texto para enviar onde quiser.</p><div className="rShareOptions"><a className="whatsapp" href={`https://wa.me/?text=${encodeURIComponent(sharePayload.text)}`} target="_blank" rel="noreferrer"><i>WA</i><span>WhatsApp</span></a><button onClick={copyShare}><i>⧉</i><span>{shareCopied ? "Copiado!" : "Copiar texto"}</span></button><a href={`mailto:?subject=${encodeURIComponent(sharePayload.title)}&body=${encodeURIComponent(sharePayload.text)}`}><i>✉</i><span>E-mail</span></a>{typeof navigator !== "undefined" && navigator.share && <button onClick={nativeShare}><i>•••</i><span>Mais opções</span></button>}</div><textarea readOnly value={sharePayload.text} onFocus={event => event.currentTarget.select()} /></section></div>}<RaffleFooter /></>;
   }
 
   if (info.closed) {
