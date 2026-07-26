@@ -98,6 +98,14 @@ export const sessions = sqliteTable("sessions", {
   createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
 });
 
+export const loginRateLimits = sqliteTable("login_rate_limits", {
+  key: text("key").primaryKey(),
+  failures: integer("failures").notNull().default(0),
+  windowStartedAt: text("window_started_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+  blockedUntil: text("blocked_until"),
+  updatedAt: text("updated_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+});
+
 export const payments = sqliteTable("payments", {
   id: integer("id").primaryKey({ autoIncrement: true }),
   userId: integer("user_id").notNull().references(() => users.id),
