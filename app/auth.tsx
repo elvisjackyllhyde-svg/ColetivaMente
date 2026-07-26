@@ -63,12 +63,24 @@ export function LoginPage() {
     finally { setBusy(false); }
   };
 
+  const skipTwoFactor = async () => {
+    if (!twoFactor?.setup) return;
+    setBusy(true); setError("");
+    try {
+      const r = await fetch("/api/auth/two-factor", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ challenge: twoFactor.challenge, skip: true }) });
+      const d = await r.json(); if (!r.ok) throw new Error(d.error);
+      location.href = "/?modo=conta";
+    } catch (e) { setError(e instanceof Error ? e.message : "Não foi possível continuar."); }
+    finally { setBusy(false); }
+  };
+
   if (twoFactor) return <><AuthHeader /><main className="aCenter"><section className="aCard">
     <p className="aEyebrow">SEGURANÇA ADMINISTRATIVA</p><h1>{twoFactor.setup ? "Ative a verificação em duas etapas" : "Digite seu código de segurança"}</h1>
     {twoFactor.setup && <><p className="aMuted">No Google Authenticator, Microsoft Authenticator ou Authy, adicione uma chave de configuração e informe o código abaixo.</p><div className="aSecret"><small>CHAVE DE CONFIGURAÇÃO</small><strong>{twoFactor.secret}</strong></div></>}
     {error && <div className="aAlert">{error}</div>}
     <div className="aFields"><Field label="Código de 6 dígitos"><input autoFocus inputMode="numeric" maxLength={6} value={code} onChange={e => setCode(e.target.value.replace(/\D/g, ""))} onKeyDown={e => e.key === "Enter" && confirmTwoFactor()} placeholder="000000" /></Field></div>
     <button className="aBtn primary big" disabled={busy || code.length !== 6} onClick={confirmTwoFactor}>{busy ? "Confirmando..." : twoFactor.setup ? "Ativar e entrar" : "Confirmar e entrar"}</button>
+    {twoFactor.setup && <button className="aBtn textMuted" disabled={busy} onClick={skipTwoFactor}>Pular por enquanto</button>}
   </section></main></>;
 
   return <><AuthHeader /><main className="aCenter"><section className="aCard">
