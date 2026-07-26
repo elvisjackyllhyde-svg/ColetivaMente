@@ -8,9 +8,10 @@ type MercadoPagoPayment={id:number|string;status:string;external_reference?:stri
 export const PLAN_AMOUNT_CENTS=12_000;
 export const PLAN_ACCESS_DAYS=30;
 export const mpSecrets=()=>env as unknown as MercadoPagoEnv;
+export const webhookSecretConfigured=()=>Boolean(mpSecrets().MP_WEBHOOK_SECRET?.trim());
 
 const hex=async(value:string,key:string)=>{const cryptoKey=await crypto.subtle.importKey("raw",new TextEncoder().encode(key),{name:"HMAC",hash:"SHA-256"},false,["sign"]);const signed=await crypto.subtle.sign("HMAC",cryptoKey,new TextEncoder().encode(value));return [...new Uint8Array(signed)].map(byte=>byte.toString(16).padStart(2,"0")).join("")};
-export async function validWebhookSignature(request:Request,dataId:string){const secret=mpSecrets().MP_WEBHOOK_SECRET;if(!secret)return true;const signature=request.headers.get("x-signature")||"",requestId=request.headers.get("x-request-id")||"",parts=Object.fromEntries(signature.split(",").map(part=>part.trim().split("=")));if(!parts.ts||!parts.v1||!requestId)return false;const expected=await hex(`id:${dataId};request-id:${requestId};ts:${parts.ts};`,secret);if(expected.length!==parts.v1.length)return false;let difference=0;for(let i=0;i<expected.length;i++)difference|=expected.charCodeAt(i)^parts.v1.charCodeAt(i);return difference===0}
+export async function validWebhookSignature(request:Request,dataId:string){const secret=mpSecrets().MP_WEBHOOK_SECRET?.trim();if(!secret)return false;const signature=request.headers.get("x-signature")||"",requestId=request.headers.get("x-request-id")||"",parts:Record<string,string>={};for(const part of signature.split(",")){const separator=part.indexOf("=");if(separator<1)continue;parts[part.slice(0,separator).trim()]=part.slice(separator+1).trim()}if(!parts.ts||!parts.v1||!requestId)return false;const expected=await hex(`id:${dataId};request-id:${requestId};ts:${parts.ts};`,secret);if(expected.length!==parts.v1.length)return false;let difference=0;for(let i=0;i<expected.length;i++)difference|=expected.charCodeAt(i)^parts.v1.charCodeAt(i);return difference===0}
 
 export async function syncMercadoPagoPayment(paymentId:string){
  const token=mpSecrets().MP_ACCESS_TOKEN;if(!token)throw new Error("Mercado Pago ainda não configurado.");
