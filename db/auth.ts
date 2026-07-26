@@ -32,11 +32,23 @@ function generateToken(): string {
 
 export async function createSession(db: ReturnType<typeof getDb>, userId: number) {
   const token = generateToken();
+  const csrfToken = generateToken();
   const expiresAt = new Date(Date.now() + SESSION_DAYS * 24 * 60 * 60 * 1000).toISOString();
-  await db.insert(sessions).values({ token, userId, expiresAt });
+  await db.insert(sessions).values({ token, csrfToken, userId, expiresAt });
   const maxAge = SESSION_DAYS * 24 * 60 * 60;
   const cookie = `${COOKIE_NAME}=${token}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=${maxAge}`;
-  return cookie;
+  return { cookie, csrfToken };
+}
+
+export async function getOrCreateCsrfToken(db: ReturnType<typeof getDb>, request: Request) {
+  const sessionToken = readCookie(request, COOKIE_NAME);
+  if (!sessionToken) return "";
+  const [session] = await db.select().from(sessions).where(and(eq(sessions.token, sessionToken), gt(sessions.expiresAt, new Date().toISOString()))).limit(1);
+  if (!session) return "";
+  if (session.csrfToken) return session.csrfToken;
+  const csrfToken = generateToken();
+  await db.update(sessions).set({ csrfToken }).where(eq(sessions.token, sessionToken));
+  return csrfToken;
 }
 
 export function clearSessionCookie() {

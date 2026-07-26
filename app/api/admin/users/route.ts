@@ -2,6 +2,7 @@ import { desc, eq } from "drizzle-orm";
 import { getDb } from "../../../../db";
 import { getCurrentUser } from "../../../../db/auth";
 import { users } from "../../../../db/schema";
+import { csrfError, verifyCsrf } from "../../../../db/csrf";
 
 async function requireAdmin(request: Request) {
   const db = getDb();
@@ -21,6 +22,7 @@ export async function GET(request: Request) {
 export async function PATCH(request: Request) {
   const auth = await requireAdmin(request);
   if ("error" in auth) return auth.error;
+  if (!(await verifyCsrf(request, auth.db))) return csrfError();
   const body = await request.json() as { userId?: number; access?: string; totalPaidCents?: number };
   const userId = Number(body.userId);
   if (!Number.isInteger(userId) || userId < 1) return Response.json({ error: "Conta inválida." }, { status: 400 });

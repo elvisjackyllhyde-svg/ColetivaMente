@@ -1,4 +1,5 @@
 "use client";
+import "./csrf-client";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import "./opinions.css";
 import "./hub.css";

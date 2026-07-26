@@ -1,6 +1,7 @@
 import { eq, inArray } from "drizzle-orm";
 import { getDb } from "../../../../db";
 import { getCurrentUser } from "../../../../db/auth";
+import { csrfError, verifyCsrf } from "../../../../db/csrf";
 import { raffleEntries, raffles, raffleWinnerHistory } from "../../../../db/schema";
 
 export async function GET(request: Request, { params }: { params: Promise<{ slug: string }> }) {
@@ -36,6 +37,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ sl
   const { slug } = await params; const body = await request.json() as { action?: string }; const db = getDb();
   const user = await getCurrentUser(request, db);
   if (!user) return Response.json({ error: "Entre na sua conta para administrar este sorteio." }, { status: 401 });
+  if (!(await verifyCsrf(request, db))) return csrfError();
   const [raffle] = await db.select().from(raffles).where(eq(raffles.slug, slug)).limit(1);
   if (!raffle || (!user.isAdmin && raffle.creatorUserId !== user.id)) return Response.json({ error: "Acesso administrativo inválido." }, { status: 403 });
   if (body.action === "draw") {

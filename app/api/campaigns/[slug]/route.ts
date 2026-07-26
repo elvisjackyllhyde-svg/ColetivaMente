@@ -1,6 +1,7 @@
 import { and, eq, sql } from "drizzle-orm";
 import { getDb } from "../../../../db";
 import { getCurrentUser } from "../../../../db/auth";
+import { csrfError, verifyCsrf } from "../../../../db/csrf";
 import { campaigns, feedback, options, participants, votes } from "../../../../db/schema";
 
 const ownsCampaign = (user: Awaited<ReturnType<typeof getCurrentUser>>, creatorUserId: number | null) =>
@@ -26,6 +27,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ sl
   const db = getDb();
   const user = await getCurrentUser(request, db);
   if (!user) return Response.json({ error: "Entre na sua conta para administrar esta pesquisa." }, { status: 401 });
+  if (!(await verifyCsrf(request, db))) return csrfError();
   const [campaign] = await db.select().from(campaigns).where(eq(campaigns.slug, slug)).limit(1);
   if (!campaign || !ownsCampaign(user, campaign.creatorUserId)) return Response.json({ error: "Acesso administrativo inválido." }, { status: 403 });
   if (body.action === "close") await db.update(campaigns).set({ closed: true, feedbackOpen: false }).where(eq(campaigns.id, campaign.id));

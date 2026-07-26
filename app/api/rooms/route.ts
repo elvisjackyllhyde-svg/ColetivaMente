@@ -3,10 +3,12 @@ import { validateQuestions } from "../../../lib/room-quiz";
 import { defaultMusicTrack, musicTracks } from "../../../lib/music-tracks";
 import { getDb } from "../../../db";
 import { getCurrentUser } from "../../../db/auth";
+import { csrfError, verifyCsrf } from "../../../db/csrf";
 
 export async function POST(req: Request) {
   const user = await getCurrentUser(req, getDb());
   if (!user) return Response.json({ error: "Entre na sua conta para criar uma partida." }, { status: 401 });
+  if (!(await verifyCsrf(req, getDb()))) return csrfError();
   if (!user.isAdmin && user.subscriptionStatus !== "lifetime" && (user.subscriptionStatus !== "active" || !user.subscriptionExpiresAt || Date.parse(user.subscriptionExpiresAt) <= Date.now())) return Response.json({ error: "É necessário ter uma assinatura ativa para criar uma partida." }, { status: 403 });
   const d1 = db();
   const now = Date.now();

@@ -3,9 +3,11 @@ import { getCurrentUser } from "../../../../db/auth";
 import { payments } from "../../../../db/schema";
 import { mpSecrets, PLAN_AMOUNT_CENTS } from "../../../../lib/mercado-pago";
 import { eq } from "drizzle-orm";
+import { csrfError, verifyCsrf } from "../../../../db/csrf";
 
 export async function POST(request:Request){
  const db=getDb(),user=await getCurrentUser(request,db);if(!user)return Response.json({error:"Entre para assinar."},{status:401});
+ if(!(await verifyCsrf(request,db)))return csrfError();
  const token=mpSecrets().MP_ACCESS_TOKEN;if(!token)return Response.json({error:"O Mercado Pago ainda está aguardando a credencial de integração."},{status:503});
  const reference=crypto.randomUUID(),origin=new URL(request.url).origin;
  await db.insert(payments).values({userId:user.id,externalReference:reference,amountCents:PLAN_AMOUNT_CENTS,currency:"BRL"});

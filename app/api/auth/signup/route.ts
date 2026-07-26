@@ -1,8 +1,10 @@
 import { getDb } from "../../../../db";
 import { users } from "../../../../db/schema";
 import { createSession, hashPassword } from "../../../../db/auth";
+import { verifyRequestOrigin } from "../../../../db/csrf";
 
 export async function POST(request: Request) {
+  if (!verifyRequestOrigin(request)) return Response.json({ error: "Origem da solicitação inválida." }, { status: 403 });
   try {
     const body = await request.json() as Record<string, unknown>;
     const name = String(body.name || "").trim().slice(0, 80);
@@ -14,8 +16,8 @@ export async function POST(request: Request) {
     const db = getDb();
     const passwordHash = await hashPassword(password);
     const [user] = await db.insert(users).values({ name, company, email, passwordHash }).returning();
-    const cookie = await createSession(db, user.id);
-    return Response.json({ id: user.id, name: user.name, email: user.email, company: user.company, subscriptionStatus: user.subscriptionStatus }, { status: 201, headers: { "Set-Cookie": cookie } });
+    const session = await createSession(db, user.id);
+    return Response.json({ id: user.id, name: user.name, email: user.email, company: user.company, subscriptionStatus: user.subscriptionStatus, csrfToken: session.csrfToken }, { status: 201, headers: { "Set-Cookie": session.cookie } });
   } catch (error) {
     const isDuplicate = error instanceof Error && error.message.includes("UNIQUE");
     return Response.json({ error: isDuplicate ? "Este e-mail já está cadastrado." : "Não foi possível criar a conta." }, { status: isDuplicate ? 409 : 500 });

@@ -94,6 +94,7 @@ export const users = sqliteTable("users", {
 
 export const sessions = sqliteTable("sessions", {
   token: text("token").primaryKey(),
+  csrfToken: text("csrf_token").notNull().default(""),
   userId: integer("user_id").notNull().references(() => users.id),
   expiresAt: text("expires_at").notNull(),
   createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),

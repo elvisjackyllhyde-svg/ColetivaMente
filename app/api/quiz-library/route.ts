@@ -3,6 +3,7 @@ import { getDb } from "../../../db";
 import { getCurrentUser } from "../../../db/auth";
 import { savedQuizzes } from "../../../db/schema";
 import { validateQuestions } from "../../../lib/room-quiz";
+import { csrfError, verifyCsrf } from "../../../db/csrf";
 
 export async function GET(request: Request) {
   const db = getDb();
@@ -19,6 +20,7 @@ export async function DELETE(request: Request) {
   const db = getDb();
   const user = await getCurrentUser(request, db);
   if (!user) return Response.json({ error: "Entre para continuar." }, { status: 401 });
+  if (!(await verifyCsrf(request, db))) return csrfError();
   const id = Number(new URL(request.url).searchParams.get("id"));
   if (!Number.isInteger(id) || id < 1) return Response.json({ error: "Quiz inválido." }, { status: 400 });
   await db.delete(savedQuizzes).where(and(eq(savedQuizzes.id, id), eq(savedQuizzes.userId, user.id)));

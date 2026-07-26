@@ -1,6 +1,7 @@
 import { getDb } from "../../../db";
 import { campaigns, options } from "../../../db/schema";
 import { getCurrentUser } from "../../../db/auth";
+import { csrfError, verifyCsrf } from "../../../db/csrf";
 
 const cleanUrl = (value: string) => {
   if (!value) return "";
@@ -12,6 +13,7 @@ export async function POST(request: Request) {
     const db = getDb();
     const user = await getCurrentUser(request, db);
     if (!user) return Response.json({ error: "Entre na sua conta para criar uma pesquisa." }, { status: 401 });
+    if (!(await verifyCsrf(request, db))) return csrfError();
     if (!user.isAdmin && user.subscriptionStatus !== "lifetime" && (user.subscriptionStatus !== "active" || !user.subscriptionExpiresAt || Date.parse(user.subscriptionExpiresAt) <= Date.now())) return Response.json({ error: "É necessário ter uma assinatura ativa para criar uma pesquisa." }, { status: 403 });
     const body = await request.json() as Record<string, unknown>;
     const title = String(body.title || "").trim().slice(0, 80);

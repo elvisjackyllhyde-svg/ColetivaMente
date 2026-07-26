@@ -1,6 +1,7 @@
 import { and, eq, isNull, or } from "drizzle-orm";
 import { getDb } from "../../../../../db";
 import { getCurrentUser } from "../../../../../db/auth";
+import { csrfError, verifyCsrf } from "../../../../../db/csrf";
 import { raffles } from "../../../../../db/schema";
 
 export async function POST(request: Request, { params }: { params: Promise<{ slug: string }> }) {
@@ -8,6 +9,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ slu
   const db = getDb();
   const user = await getCurrentUser(request, db);
   if (!user) return Response.json({ error: "Entre na sua conta para recuperar este painel." }, { status: 401 });
+  if (!(await verifyCsrf(request, db))) return csrfError();
   const body = await request.json() as { legacyToken?: string };
   const token = String(body.legacyToken || "");
   if (!token) return Response.json({ error: "Código antigo ausente." }, { status: 400 });
