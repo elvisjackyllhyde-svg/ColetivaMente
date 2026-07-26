@@ -1,9 +1,9 @@
 import { env } from "cloudflare:workers";
-import { and, eq, ne, sql } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import { getDb } from "../db";
-import { payments, users } from "../db/schema";
+import { payments } from "../db/schema";
 
-type MercadoPagoEnv={MP_ACCESS_TOKEN?:string;MP_WEBHOOK_SECRET?:string};
+type MercadoPagoEnv={DB:D1Database;MP_ACCESS_TOKEN?:string;MP_WEBHOOK_SECRET?:string};
 type MercadoPagoPayment={id:number|string;status:string;external_reference?:string;transaction_amount?:number;currency_id?:string;date_approved?:string};
 export const PLAN_AMOUNT_CENTS=12_000;
 export const PLAN_ACCESS_DAYS=30;
@@ -19,9 +19,13 @@ export async function syncMercadoPagoPayment(paymentId:string){
  const db=getDb();const[local]=await db.select().from(payments).where(eq(payments.externalReference,reference)).limit(1);if(!local)throw new Error("Pagamento não pertence à plataforma.");
  const amountCents=Math.round(Number(remote.transaction_amount||0)*100);if(amountCents!==local.amountCents||remote.currency_id!==local.currency)throw new Error("O valor do pagamento não confere.");
  const normalized=remote.status==="approved"?"approved":remote.status||"pending";
- if(normalized==="approved"&&local.status!=="approved"){
-  const changed=await db.update(payments).set({status:"approved",providerPaymentId:String(remote.id),approvedAt:remote.date_approved||new Date().toISOString(),updatedAt:new Date().toISOString()}).where(and(eq(payments.id,local.id),ne(payments.status,"approved"))).returning({id:payments.id});
-  if(changed.length){const[user]=await db.select().from(users).where(eq(users.id,local.userId)).limit(1);if(user){const current=user.subscriptionExpiresAt?Date.parse(user.subscriptionExpiresAt):0,base=Math.max(Date.now(),Number.isFinite(current)?current:0),expiresAt=new Date(base+PLAN_ACCESS_DAYS*86_400_000).toISOString();await db.update(users).set({subscriptionStatus:"active",subscriptionExpiresAt:expiresAt,totalPaidCents:sql`${users.totalPaidCents}+${local.amountCents}`}).where(eq(users.id,local.userId));}}
+ if(normalized==="approved"){
+  await db.update(payments).set({status:"approved",providerPaymentId:String(remote.id),approvedAt:remote.date_approved||local.approvedAt||new Date().toISOString(),updatedAt:new Date().toISOString()}).where(eq(payments.id,local.id));
+  const runtime=mpSecrets();
+  await runtime.DB.batch([
+   runtime.DB.prepare("UPDATE users SET subscription_status = 'active', subscription_expires_at = datetime(MAX(unixepoch('now'), COALESCE(unixepoch(subscription_expires_at), 0)) + ?, 'unixepoch'), total_paid_cents = total_paid_cents + ? WHERE id = ? AND EXISTS (SELECT 1 FROM payments WHERE id = ? AND access_granted_at IS NULL)").bind(PLAN_ACCESS_DAYS*86_400,local.amountCents,local.userId,local.id),
+   runtime.DB.prepare("UPDATE payments SET access_granted_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP WHERE id = ? AND access_granted_at IS NULL").bind(local.id),
+  ]);
  }else if(local.status!=="approved")await db.update(payments).set({status:normalized,providerPaymentId:String(remote.id),updatedAt:new Date().toISOString()}).where(eq(payments.id,local.id));
  return{status:normalized,userId:local.userId};
 }

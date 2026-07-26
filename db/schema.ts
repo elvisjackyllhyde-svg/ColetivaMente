@@ -109,6 +109,7 @@ export const payments = sqliteTable("payments", {
   currency: text("currency").notNull().default("BRL"),
   status: text("status").notNull().default("created"),
   approvedAt: text("approved_at"),
+  accessGrantedAt: text("access_granted_at"),
   createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
   updatedAt: text("updated_at").notNull().default(sql`CURRENT_TIMESTAMP`),
 });
