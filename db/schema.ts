@@ -89,6 +89,18 @@ export const users = sqliteTable("users", {
   mpSubscriptionId: text("mp_subscription_id").notNull().default(""),
   totalPaidCents: integer("total_paid_cents").notNull().default(0),
   isAdmin: integer("is_admin", { mode: "boolean" }).notNull().default(false),
+  emailVerifiedAt: text("email_verified_at").notNull().default(""),
+  twoFactorSecret: text("two_factor_secret").notNull().default(""),
+  twoFactorEnabled: integer("two_factor_enabled", { mode: "boolean" }).notNull().default(false),
+  createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+});
+
+export const authTokens = sqliteTable("auth_tokens", {
+  token: text("token").primaryKey(),
+  userId: integer("user_id").notNull().references(() => users.id),
+  purpose: text("purpose").notNull(),
+  secret: text("secret").notNull().default(""),
+  expiresAt: text("expires_at").notNull(),
   createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
 });
 

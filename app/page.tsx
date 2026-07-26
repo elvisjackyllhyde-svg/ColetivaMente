@@ -6,7 +6,7 @@ import "./hub.css";
 import "./voto-gold.css";
 import { RaffleBuilder, RaffleView } from "./raffle";
 import { Field, LinkBox } from "./ui";
-import { AccountPage, AccountStatus, LoginPage, RequireActiveSubscription, SignupPage } from "./auth";
+import { AccountPage, AccountStatus, ForgotPasswordPage, LoginPage, RequireActiveSubscription, ResetPasswordPage, SignupPage, VerifyEmailPage } from "./auth";
 import { GiroQuizApp } from "./giroquiz";
 import { AdminPage } from "./admin";
 
@@ -23,13 +23,16 @@ const starter:Item[]=[
 const uid=()=>crypto.randomUUID();
 
 export default function Home(){
- const [params,setParams]=useState<{slug:string;raffleSlug:string;legacyAdmin:string;mode:string}|null>(null);
- useEffect(()=>{const p=new URLSearchParams(location.search),legacyAdmin=p.get("admin")||"";if(legacyAdmin){p.delete("admin");history.replaceState(null,"",`${location.pathname}${p.size?`?${p.toString()}`:""}${location.hash}`)}setParams({slug:p.get("p")||"",raffleSlug:p.get("r")||"",legacyAdmin,mode:p.get("modo")||""})},[]);
+ const [params,setParams]=useState<{slug:string;raffleSlug:string;legacyAdmin:string;mode:string;token:string}|null>(null);
+ useEffect(()=>{const p=new URLSearchParams(location.search),legacyAdmin=p.get("admin")||"";if(legacyAdmin){p.delete("admin");history.replaceState(null,"",`${location.pathname}${p.size?`?${p.toString()}`:""}${location.hash}`)}setParams({slug:p.get("p")||"",raffleSlug:p.get("r")||"",legacyAdmin,mode:p.get("modo")||"",token:p.get("token")||""})},[]);
  if(!params)return <main className="center"><div className="loader"/></main>;
  if(params.raffleSlug)return <RaffleView slug={params.raffleSlug} legacyAdmin={params.legacyAdmin}/>;
  if(!params.slug){
   if(params.mode==="login")return <LoginPage/>;
   if(params.mode==="signup")return <SignupPage/>;
+  if(params.mode==="esqueci-senha")return <ForgotPasswordPage/>;
+  if(params.mode==="trocar-senha")return <ResetPasswordPage token={params.token}/>;
+  if(params.mode==="verificar-email")return <VerifyEmailPage token={params.token}/>;
   if(params.mode==="conta")return <AccountPage/>;
   if(params.mode==="admin")return <AdminPage/>;
   if(params.mode==="voto")return <RequireActiveSubscription><Builder/></RequireActiveSubscription>;

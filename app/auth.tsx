@@ -37,6 +37,8 @@ function AuthHeader() {
 export function LoginPage() {
   const [email, setEmail] = useState(""); const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false); const [error, setError] = useState("");
+  const [twoFactor, setTwoFactor] = useState<{ challenge: string; setup: boolean; secret?: string } | null>(null);
+  const [code, setCode] = useState("");
 
   const submit = async () => {
     setBusy(true); setError("");
@@ -44,10 +46,30 @@ export function LoginPage() {
       const r = await fetch("/api/auth/login", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ email, password }) });
       const d = await r.json();
       if (!r.ok) throw new Error(d.error);
+      if (d.requiresTwoFactor) { setTwoFactor(d); return; }
       location.href = "/?modo=conta";
     } catch (e) { setError(e instanceof Error ? e.message : "Não foi possível entrar."); }
     finally { setBusy(false); }
   };
+
+  const confirmTwoFactor = async () => {
+    if (!twoFactor) return;
+    setBusy(true); setError("");
+    try {
+      const r = await fetch("/api/auth/two-factor", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ challenge: twoFactor.challenge, code }) });
+      const d = await r.json(); if (!r.ok) throw new Error(d.error);
+      location.href = "/?modo=conta";
+    } catch (e) { setError(e instanceof Error ? e.message : "Não foi possível confirmar o código."); }
+    finally { setBusy(false); }
+  };
+
+  if (twoFactor) return <><AuthHeader /><main className="aCenter"><section className="aCard">
+    <p className="aEyebrow">SEGURANÇA ADMINISTRATIVA</p><h1>{twoFactor.setup ? "Ative a verificação em duas etapas" : "Digite seu código de segurança"}</h1>
+    {twoFactor.setup && <><p className="aMuted">No Google Authenticator, Microsoft Authenticator ou Authy, adicione uma chave de configuração e informe o código abaixo.</p><div className="aSecret"><small>CHAVE DE CONFIGURAÇÃO</small><strong>{twoFactor.secret}</strong></div></>}
+    {error && <div className="aAlert">{error}</div>}
+    <div className="aFields"><Field label="Código de 6 dígitos"><input autoFocus inputMode="numeric" maxLength={6} value={code} onChange={e => setCode(e.target.value.replace(/\D/g, ""))} onKeyDown={e => e.key === "Enter" && confirmTwoFactor()} placeholder="000000" /></Field></div>
+    <button className="aBtn primary big" disabled={busy || code.length !== 6} onClick={confirmTwoFactor}>{busy ? "Confirmando..." : twoFactor.setup ? "Ativar e entrar" : "Confirmar e entrar"}</button>
+  </section></main></>;
 
   return <><AuthHeader /><main className="aCenter"><section className="aCard">
     <p className="aEyebrow">ENTRAR</p><h1>Acesse sua conta</h1>
@@ -57,6 +79,7 @@ export function LoginPage() {
       <Field label="Senha"><input type="password" value={password} onChange={e => setPassword(e.target.value)} onKeyDown={e => e.key === "Enter" && submit()} /></Field>
     </div>
     <button className="aBtn primary big" disabled={busy || !email || password.length < 1} onClick={submit}>{busy ? "Entrando..." : "Entrar →"}</button>
+    <p className="aSwitch"><a href="/?modo=esqueci-senha">Esqueci minha senha</a></p>
     <p className="aSwitch">Ainda não tem conta? <a href="/?modo=signup">Criar conta</a></p>
   </section></main></>;
 }
@@ -71,6 +94,7 @@ export function SignupPage() {
       const r = await fetch("/api/auth/signup", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ name, company, email, password }) });
       const d = await r.json();
       if (!r.ok) throw new Error(d.error);
+      if (d.created) { alert(d.emailSent ? "Conta criada. Abra seu e-mail para confirmar o cadastro." : "Conta criada, mas o envio de e-mail ainda não está configurado. Fale com o administrador."); location.href = "/?modo=login"; return; }
       location.href = "/?modo=conta";
     } catch (e) { setError(e instanceof Error ? e.message : "Não foi possível criar a conta."); }
     finally { setBusy(false); }
@@ -90,6 +114,24 @@ export function SignupPage() {
     <button className="aBtn primary big" disabled={busy || !valid} onClick={submit}>{busy ? "Criando conta..." : "Criar conta →"}</button>
     <p className="aSwitch">Já tem conta? <a href="/?modo=login">Entrar</a></p>
   </section></main></>;
+}
+
+export function ForgotPasswordPage() {
+  const [email, setEmail] = useState(""), [busy, setBusy] = useState(false), [done, setDone] = useState(false), [error, setError] = useState("");
+  const submit = async () => { setBusy(true); setError(""); try { const r = await fetch("/api/auth/forgot-password", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ email }) }); const d = await r.json(); if (!r.ok) throw new Error(d.error); setDone(true); } catch (e) { setError(e instanceof Error ? e.message : "Não foi possível continuar."); } finally { setBusy(false); } };
+  return <><AuthHeader /><main className="aCenter"><section className="aCard"><p className="aEyebrow">RECUPERAR SENHA</p><h1>{done ? "Confira seu e-mail" : "Esqueceu sua senha?"}</h1>{done ? <><p className="aMuted">Se o endereço estiver cadastrado, enviamos um link válido por 30 minutos.</p><a className="aBtn secondary" href="/?modo=login">Voltar ao login</a></> : <>{error && <div className="aAlert">{error}</div>}<div className="aFields"><Field label="E-mail da conta"><input type="email" autoFocus value={email} onChange={e => setEmail(e.target.value)} /></Field></div><button className="aBtn primary big" disabled={busy || !email} onClick={submit}>{busy ? "Enviando..." : "Enviar link de recuperação"}</button></>}</section></main></>;
+}
+
+export function ResetPasswordPage({ token }: { token: string }) {
+  const [password, setPassword] = useState(""), [confirm, setConfirm] = useState(""), [busy, setBusy] = useState(false), [done, setDone] = useState(false), [error, setError] = useState("");
+  const submit = async () => { setBusy(true); setError(""); try { const r = await fetch("/api/auth/reset-password", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ token, password }) }); const d = await r.json(); if (!r.ok) throw new Error(d.error); setDone(true); } catch (e) { setError(e instanceof Error ? e.message : "Não foi possível trocar a senha."); } finally { setBusy(false); } };
+  return <><AuthHeader /><main className="aCenter"><section className="aCard"><p className="aEyebrow">NOVA SENHA</p><h1>{done ? "Senha alterada" : "Crie uma nova senha"}</h1>{done ? <a className="aBtn primary" href="/?modo=login">Entrar na conta</a> : <>{error && <div className="aAlert">{error}</div>}<div className="aFields"><Field label="Nova senha"><input type="password" autoFocus value={password} onChange={e => setPassword(e.target.value)} /></Field><Field label="Confirmar senha"><input type="password" value={confirm} onChange={e => setConfirm(e.target.value)} /></Field></div><button className="aBtn primary big" disabled={busy || password.length < 8 || password !== confirm} onClick={submit}>Salvar nova senha</button></>}</section></main></>;
+}
+
+export function VerifyEmailPage({ token }: { token: string }) {
+  const [status, setStatus] = useState("Confirmando seu e-mail...");
+  useEffect(() => { fetch("/api/auth/verify-email", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ token }) }).then(async r => { const d = await r.json(); setStatus(r.ok ? "E-mail confirmado. Sua conta está pronta." : d.error); }).catch(() => setStatus("Não foi possível confirmar o e-mail.")); }, [token]);
+  return <><AuthHeader /><main className="aCenter"><section className="aCard"><p className="aEyebrow">CONFIRMAÇÃO</p><h1>{status}</h1><a className="aBtn primary" href="/?modo=login">Ir para o login</a></section></main></>;
 }
 
 export function AccountPage() {

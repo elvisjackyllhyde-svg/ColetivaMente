@@ -1,7 +1,10 @@
 import { getDb } from "../../../../db";
 import { users } from "../../../../db/schema";
-import { createSession, hashPassword } from "../../../../db/auth";
+import { hashPassword } from "../../../../db/auth";
+import { createAuthToken } from "../../../../db/auth-tokens";
+import { sendAccountEmail } from "../../../../lib/email";
 import { verifyRequestOrigin } from "../../../../db/csrf";
+import { eq } from "drizzle-orm";
 
 export async function POST(request: Request) {
   if (!verifyRequestOrigin(request)) return Response.json({ error: "Origem da solicitação inválida." }, { status: 403 });
@@ -16,8 +19,11 @@ export async function POST(request: Request) {
     const db = getDb();
     const passwordHash = await hashPassword(password);
     const [user] = await db.insert(users).values({ name, company, email, passwordHash }).returning();
-    const session = await createSession(db, user.id);
-    return Response.json({ id: user.id, name: user.name, email: user.email, company: user.company, subscriptionStatus: user.subscriptionStatus, csrfToken: session.csrfToken }, { status: 201, headers: { "Set-Cookie": session.cookie } });
+    const token = await createAuthToken(db, user.id, "verify_email", 24 * 60);
+    const link = `${new URL(request.url).origin}/?modo=verificar-email&token=${token}`;
+    const sent = await sendAccountEmail(email, "Confirme seu e-mail — ColetivaMente", `<h2>Confirme seu e-mail</h2><p>Olá, ${name}. Clique no botão para ativar sua conta:</p><p><a href="${link}">Confirmar meu e-mail</a></p><p>O link expira em 24 horas.</p>`);
+    if (!sent) await db.update(users).set({ emailVerifiedAt: new Date().toISOString() }).where(eq(users.id, user.id));
+    return Response.json({ created: true, emailSent: sent }, { status: 201 });
   } catch (error) {
     const isDuplicate = error instanceof Error && error.message.includes("UNIQUE");
     return Response.json({ error: isDuplicate ? "Este e-mail já está cadastrado." : "Não foi possível criar a conta." }, { status: isDuplicate ? 409 : 500 });
