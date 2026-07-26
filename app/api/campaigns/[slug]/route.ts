@@ -1,12 +1,18 @@
 import { and, eq, sql } from "drizzle-orm";
 import { getDb } from "../../../../db";
+import { getCurrentUser } from "../../../../db/auth";
 import { campaigns, feedback, options, participants, votes } from "../../../../db/schema";
 
+const ownsCampaign = (user: Awaited<ReturnType<typeof getCurrentUser>>, creatorUserId: number | null) =>
+  Boolean(user && (user.isAdmin || user.id === creatorUserId));
+
 export async function GET(request: Request, { params }: { params: Promise<{ slug: string }> }) {
-  const { slug } = await params; const url = new URL(request.url); const db = getDb();
+  const { slug } = await params;
+  const db = getDb();
   const [campaign] = await db.select().from(campaigns).where(eq(campaigns.slug, slug)).limit(1);
   if (!campaign) return Response.json({ error: "Votação não encontrada." }, { status: 404 });
-  const isAdmin = url.searchParams.get("admin") === campaign.adminToken;
+  const user = await getCurrentUser(request, db);
+  const isAdmin = ownsCampaign(user, campaign.creatorUserId);
   const rows = await db.select({ id: options.id, name: options.name, category: options.category, price: options.price, position: options.position, votes: sql<number>`count(${votes.id})` }).from(options).leftJoin(votes, eq(options.id, votes.optionId)).where(eq(options.campaignId, campaign.id)).groupBy(options.id).orderBy(options.position);
   const canSee = isAdmin || campaign.closed || !campaign.hideResults;
   const leads = isAdmin ? await db.select({ name: participants.name, email: participants.email, createdAt: participants.createdAt }).from(participants).where(eq(participants.campaignId, campaign.id)).orderBy(participants.createdAt) : undefined;
@@ -15,9 +21,13 @@ export async function GET(request: Request, { params }: { params: Promise<{ slug
 }
 
 export async function PATCH(request: Request, { params }: { params: Promise<{ slug: string }> }) {
-  const { slug } = await params; const body = await request.json() as { adminToken?: string; action?: string }; const db = getDb();
-  const [campaign] = await db.select().from(campaigns).where(and(eq(campaigns.slug, slug), eq(campaigns.adminToken, body.adminToken || ""))).limit(1);
-  if (!campaign) return Response.json({ error: "Acesso administrativo inválido." }, { status: 403 });
+  const { slug } = await params;
+  const body = await request.json() as { action?: string };
+  const db = getDb();
+  const user = await getCurrentUser(request, db);
+  if (!user) return Response.json({ error: "Entre na sua conta para administrar esta pesquisa." }, { status: 401 });
+  const [campaign] = await db.select().from(campaigns).where(eq(campaigns.slug, slug)).limit(1);
+  if (!campaign || !ownsCampaign(user, campaign.creatorUserId)) return Response.json({ error: "Acesso administrativo inválido." }, { status: 403 });
   if (body.action === "close") await db.update(campaigns).set({ closed: true, feedbackOpen: false }).where(eq(campaigns.id, campaign.id));
   if (body.action === "reopen") await db.update(campaigns).set({ closed: false }).where(eq(campaigns.id, campaign.id));
   if (body.action === "feedback") await db.update(campaigns).set({ feedbackOpen: true }).where(eq(campaigns.id, campaign.id));

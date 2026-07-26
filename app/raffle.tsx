@@ -7,7 +7,7 @@ type RaffleInfo = { title: string; prizeTitle: string; prizeDescription: string;
 type Entry = { name: string; email: string; manual?: boolean; createdAt: string };
 type Winner = { name: string };
 type HistoryWinner = { drawId: string; name: string; position: number; drawnAt: string };
-type AccountHistoryWinner = HistoryWinner & { raffleTitle: string; raffleSlug: string; adminToken: string };
+type AccountHistoryWinner = HistoryWinner & { raffleTitle: string; raffleSlug: string };
 
 function RaffleHeader({ title = "Sorteio" }: { title?: string }) {
   return <header className="rHeader"><a className="rBrand" href="/"><span className="rBrandMark" aria-hidden="true"><svg viewBox="0 0 48 48"><path d="M16 10h16v7c0 7-3.6 11.5-8 11.5S16 24 16 17v-7Z"/><path d="M16 14h-5v3c0 4 2.4 7 6.2 7.7M32 14h5v3c0 4-2.4 7-6.2 7.7M24 29v6M17 39h14M20 35h8"/><path className="rSpark" d="m37.5 7 .8 2.2 2.2.8-2.2.8-.8 2.2-.8-2.2-2.2-.8 2.2-.8.8-2.2ZM10 27l.7 1.8 1.8.7-1.8.7L10 32l-.7-1.8-1.8-.7 1.8-.7L10 27Z"/></svg></span><div><strong>{title}</strong><small>SORTEIO CORPORATIVO</small></div></a></header>;
@@ -23,7 +23,7 @@ export function RaffleBuilder() {
   const [winnersCount, setWinnersCount] = useState(1);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
-  const [created, setCreated] = useState<{ slug: string; adminToken: string } | null>(null);
+  const [created, setCreated] = useState<{ slug: string } | null>(null);
 
   const create = async () => {
     setBusy(true); setError("");
@@ -38,8 +38,8 @@ export function RaffleBuilder() {
 
   const base = typeof location !== "undefined" ? location.origin + location.pathname : "";
   if (created) {
-    const entry = `${base}?r=${created.slug}`, admin = `${base}?r=${created.slug}&admin=${created.adminToken}`;
-    return <main className="rCenter"><section className="rSuccess"><div className="rSuccessIcon">🎉</div><p className="rEyebrow">SORTEIO CRIADO</p><h1>Seu link está pronto</h1><p>Envie o link de inscrição para os participantes. Guarde o link do painel para realizar o sorteio quando quiser.</p><LinkBox label="Link de inscrição" value={entry} /><LinkBox label="Seu painel do sorteio" value={admin} /><div className="rSuccessActions"><a className="rBtn primary" href={admin}>Abrir meu painel</a><a className="rBtn secondary" href={entry}>Ver como participante</a></div></section></main>;
+    const entry = `${base}?r=${created.slug}`;
+    return <main className="rCenter"><section className="rSuccess"><div className="rSuccessIcon">🎉</div><p className="rEyebrow">SORTEIO CRIADO</p><h1>Seu link está pronto</h1><p>Envie este link aos participantes. Quando você estiver conectado à sua conta, o mesmo endereço abre automaticamente o painel do sorteio.</p><LinkBox label="Link do sorteio" value={entry} /><div className="rSuccessActions"><a className="rBtn primary" href={entry}>Abrir meu painel</a><a className="rBtn secondary" href={entry}>Ver link compartilhável</a></div></section></main>;
   }
 
   return <><RaffleHeader /><main className="rContainer"><div className="rHero"><p className="rEyebrow">CRIE • CONVIDE • SORTEIE</p><h1>Um sorteio para fechar<br />seu treinamento com energia.</h1><p>Monte o sorteio, compartilhe o link com a equipe e revele os ganhadores ao vivo.</p></div>
@@ -56,7 +56,7 @@ export function RaffleBuilder() {
   </main><RaffleFooter /></>;
 }
 
-export function RaffleView({ slug, admin }: { slug: string; admin: string }) {
+export function RaffleView({ slug, legacyAdmin }: { slug: string; legacyAdmin: string }) {
   const [info, setInfo] = useState<RaffleInfo | null>(null);
   const [entryCount, setEntryCount] = useState(0);
   const [entries, setEntries] = useState<Entry[]>([]);
@@ -73,13 +73,15 @@ export function RaffleView({ slug, admin }: { slug: string; admin: string }) {
   const [shareCopied, setShareCopied] = useState(false);
   const [suspense, setSuspense] = useState(false); const [spinName, setSpinName] = useState("");
   const suspenseRef = useRef(false);
+  const legacyClaimedRef = useRef(false);
 
   const load = useCallback(async () => {
-    const r = await fetch(`/api/raffles/${encodeURIComponent(slug)}${admin ? `?admin=${encodeURIComponent(admin)}` : ""}`, { cache: "no-store" });
+    if (legacyAdmin && !legacyClaimedRef.current) { legacyClaimedRef.current = true; await fetch(`/api/raffles/${encodeURIComponent(slug)}/claim`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ legacyToken: legacyAdmin }) }); }
+    const r = await fetch(`/api/raffles/${encodeURIComponent(slug)}`, { cache: "no-store" });
     const d = await r.json();
     if (r.ok) { setInfo(d.raffle); setEntryCount(d.entryCount); setEntries(d.entries || []); setHistory(d.history || []); setAccountHistory(d.accountHistory || []); if (!suspenseRef.current) setWinners(d.winners || []); }
     else setError(d.error);
-  }, [slug, admin]);
+  }, [slug, legacyAdmin]);
   useEffect(() => { load(); const t = setInterval(load, 5000); return () => clearInterval(t); }, [load]);
   useEffect(() => { setEntered(localStorage.getItem(`raffle-entered-${slug}`) === "1"); }, [slug]);
 
@@ -96,7 +98,7 @@ export function RaffleView({ slug, admin }: { slug: string; admin: string }) {
 
   const draw = async () => {
     setDrawing(true); setError("");
-    const r = await fetch(`/api/raffles/${slug}`, { method: "PATCH", headers: { "content-type": "application/json" }, body: JSON.stringify({ adminToken: admin, action: "draw" }) });
+    const r = await fetch(`/api/raffles/${slug}`, { method: "PATCH", headers: { "content-type": "application/json" }, body: JSON.stringify({ action: "draw" }) });
     const d = await r.json();
     if (!r.ok) { setDrawing(false); return setError(d.error); }
     const pool = entries.length ? entries.map(e => e.name) : ["🎉"];
@@ -109,13 +111,13 @@ export function RaffleView({ slug, admin }: { slug: string; admin: string }) {
     }, 5000);
   };
   const reset = async () => {
-    await fetch(`/api/raffles/${slug}`, { method: "PATCH", headers: { "content-type": "application/json" }, body: JSON.stringify({ adminToken: admin, action: "reset" }) });
+    await fetch(`/api/raffles/${slug}`, { method: "PATCH", headers: { "content-type": "application/json" }, body: JSON.stringify({ action: "reset" }) });
     load();
   };
   const addManual = async () => {
     setAddingManual(true); setError("");
     try {
-      const r = await fetch(`/api/raffles/${slug}/manual`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ name: manualName, adminToken: admin }) });
+      const r = await fetch(`/api/raffles/${slug}/manual`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ name: manualName }) });
       const d = await r.json();
       if (!r.ok) throw new Error(d.error);
       setManualName(""); await load();
@@ -154,7 +156,7 @@ export function RaffleView({ slug, admin }: { slug: string; admin: string }) {
   if (!info) return <main className="rCenter"><div className="rLoader" /></main>;
 
   if (info.isAdmin) {
-    const visibleHistory: AccountHistoryWinner[] = accountHistory.length ? accountHistory : history.map(item => ({ ...item, raffleTitle: info.title, raffleSlug: slug, adminToken: admin }));
+    const visibleHistory: AccountHistoryWinner[] = accountHistory.length ? accountHistory : history.map(item => ({ ...item, raffleTitle: info.title, raffleSlug: slug }));
     const historyRounds = Array.from(visibleHistory.reduce((groups, item) => { const key = `${item.raffleSlug}:${item.drawId}`; const group = groups.get(key) || []; group.push(item); groups.set(key, group); return groups; }, new Map<string, AccountHistoryWinner[]>()).values()).reverse();
     const latestCurrentRound = historyRounds.find(round => round[0].raffleSlug === slug);
     return <><RaffleHeader title={info.title} /><main className="rContainer rAdmin">
@@ -168,7 +170,7 @@ export function RaffleView({ slug, admin }: { slug: string; admin: string }) {
         : <section className="rWinners">{latestCurrentRound && <div className="rDrawReceipt"><span>NÚMERO DO SORTEIO</span><strong>{drawNumber(latestCurrentRound[0].drawId)}</strong></div>}{winners.map((w, i) => <div className="rWinnerCard" key={w.name + i} style={{ animationDelay: `${i * 0.12}s` }}><span>{i + 1}</span><strong>{w.name}</strong></div>)}<div className="rWinnerActions">{latestCurrentRound && <button className="rBtn share" onClick={() => openShareRound(latestCurrentRound)}>↗ Compartilhar ganhador{winners.length > 1 ? "es" : ""}</button>}<button className="rBtn secondary" onClick={reset}>↻ Sortear novamente</button></div></section>}
       <section className="rPanel rManualPanel"><div><p className="rEyebrow">CADASTRO MANUAL</p><h2>Adicionar participante sem e-mail</h2><p>Inclua pessoas que não conseguem se inscrever pelo celular.</p></div><div className="rManualForm"><input value={manualName} onChange={e => setManualName(e.target.value)} onKeyDown={e => { if (e.key === "Enter" && manualName.trim().length >= 2) addManual(); }} placeholder="Nome do participante" maxLength={80} /><button className="rBtn primary" disabled={addingManual || manualName.trim().length < 2 || info.closed} onClick={addManual}>{addingManual ? "Adicionando..." : "+ Adicionar"}</button></div>{info.closed && <small className="rHint">Reabra o sorteio para adicionar novos participantes.</small>}</section>
       <section className="rPanel rEntryList"><h2>Participantes ({entries.length})</h2><div className="rEntryTable">{entries.map((e, i) => <div className="rEntryRow" key={`${e.email}-${e.name}-${i}`}><span>{e.name}</span><small>{e.manual ? "Adicionado manualmente" : e.email}</small></div>)}</div></section>
-      <section className="rPanel rHistory"><div className="rHistoryHead"><div><p className="rEyebrow">REGISTRO DA SUA CONTA</p><h2>Histórico de ganhadores</h2></div><strong>{historyRounds.length} rodada{historyRounds.length !== 1 ? "s" : ""}</strong></div>{historyRounds.length === 0 ? <p className="rHistoryEmpty">O histórico aparecerá aqui depois do primeiro sorteio.</p> : <div className="rHistoryRounds">{historyRounds.map(round => { const raw = round[0].drawnAt; const date = new Date(raw.includes("T") ? raw : `${raw.replace(" ", "T")}Z`); return <article className="rHistoryRound" key={`${round[0].raffleSlug}-${round[0].drawId}`}><header><span>{round[0].raffleTitle}</span><time>{date.toLocaleDateString("pt-BR")} às {date.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}</time></header><div className="rHistoryNumber"><small>NÚMERO DO SORTEIO</small><strong>{drawNumber(round[0].drawId)}</strong></div><div>{[...round].sort((a,b) => a.position - b.position).map(w => <p key={`${w.drawId}-${w.position}`}><i>{w.position + 1}</i><strong>{w.name}</strong></p>)}</div><div className="rHistoryActions"><button onClick={() => openShareRound(round)}>↗ Compartilhar resultado</button><a href={`?r=${encodeURIComponent(round[0].raffleSlug)}&admin=${encodeURIComponent(round[0].adminToken)}`}>Abrir painel →</a></div></article>; })}</div>}</section>
+      <section className="rPanel rHistory"><div className="rHistoryHead"><div><p className="rEyebrow">REGISTRO DA SUA CONTA</p><h2>Histórico de ganhadores</h2></div><strong>{historyRounds.length} rodada{historyRounds.length !== 1 ? "s" : ""}</strong></div>{historyRounds.length === 0 ? <p className="rHistoryEmpty">O histórico aparecerá aqui depois do primeiro sorteio.</p> : <div className="rHistoryRounds">{historyRounds.map(round => { const raw = round[0].drawnAt; const date = new Date(raw.includes("T") ? raw : `${raw.replace(" ", "T")}Z`); return <article className="rHistoryRound" key={`${round[0].raffleSlug}-${round[0].drawId}`}><header><span>{round[0].raffleTitle}</span><time>{date.toLocaleDateString("pt-BR")} às {date.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}</time></header><div className="rHistoryNumber"><small>NÚMERO DO SORTEIO</small><strong>{drawNumber(round[0].drawId)}</strong></div><div>{[...round].sort((a,b) => a.position - b.position).map(w => <p key={`${w.drawId}-${w.position}`}><i>{w.position + 1}</i><strong>{w.name}</strong></p>)}</div><div className="rHistoryActions"><button onClick={() => openShareRound(round)}>↗ Compartilhar resultado</button><a href={`?r=${encodeURIComponent(round[0].raffleSlug)}`}>Abrir painel →</a></div></article>; })}</div>}</section>
     </main>{sharePayload && <div className="rShareOverlay" onMouseDown={event => { if (event.target === event.currentTarget) setSharePayload(null); }}><section className="rShareModal" role="dialog" aria-modal="true" aria-label="Compartilhar resultado"><button className="rShareClose" onClick={() => setSharePayload(null)} aria-label="Fechar">×</button><p className="rEyebrow">COMPARTILHAR</p><h2>Envie o resultado</h2><p>Escolha uma plataforma ou copie o texto para enviar onde quiser.</p><div className="rShareOptions"><a className="whatsapp" href={`https://wa.me/?text=${encodeURIComponent(sharePayload.text)}`} target="_blank" rel="noreferrer"><i>WA</i><span>WhatsApp</span></a><button onClick={copyShare}><i>⧉</i><span>{shareCopied ? "Copiado!" : "Copiar texto"}</span></button><a href={`mailto:?subject=${encodeURIComponent(sharePayload.title)}&body=${encodeURIComponent(sharePayload.text)}`}><i>✉</i><span>E-mail</span></a>{typeof navigator !== "undefined" && navigator.share && <button onClick={nativeShare}><i>•••</i><span>Mais opções</span></button>}</div><textarea readOnly value={sharePayload.text} onFocus={event => event.currentTarget.select()} /></section></div>}<RaffleFooter /></>;
   }
 

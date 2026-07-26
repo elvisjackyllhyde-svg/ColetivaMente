@@ -1,5 +1,5 @@
 "use client";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import "./opinions.css";
 import "./hub.css";
 import "./voto-gold.css";
@@ -22,10 +22,10 @@ const starter:Item[]=[
 const uid=()=>crypto.randomUUID();
 
 export default function Home(){
- const [params,setParams]=useState<{slug:string;raffleSlug:string;admin:string;mode:string}|null>(null);
- useEffect(()=>{const p=new URLSearchParams(location.search);setParams({slug:p.get("p")||"",raffleSlug:p.get("r")||"",admin:p.get("admin")||"",mode:p.get("modo")||""})},[]);
+ const [params,setParams]=useState<{slug:string;raffleSlug:string;legacyAdmin:string;mode:string}|null>(null);
+ useEffect(()=>{const p=new URLSearchParams(location.search),legacyAdmin=p.get("admin")||"";if(legacyAdmin){p.delete("admin");history.replaceState(null,"",`${location.pathname}${p.size?`?${p.toString()}`:""}${location.hash}`)}setParams({slug:p.get("p")||"",raffleSlug:p.get("r")||"",legacyAdmin,mode:p.get("modo")||""})},[]);
  if(!params)return <main className="center"><div className="loader"/></main>;
- if(params.raffleSlug)return <RaffleView slug={params.raffleSlug} admin={params.admin}/>;
+ if(params.raffleSlug)return <RaffleView slug={params.raffleSlug} legacyAdmin={params.legacyAdmin}/>;
  if(!params.slug){
   if(params.mode==="login")return <LoginPage/>;
   if(params.mode==="signup")return <SignupPage/>;
@@ -36,7 +36,7 @@ export default function Home(){
   if(params.mode==="quiz")return <GiroQuizApp/>;
   return <><AccountStatus/><ExperienceHub/></>;
  }
- return <CampaignView slug={params.slug} admin={params.admin}/>;
+ return <CampaignView slug={params.slug} legacyAdmin={params.legacyAdmin}/>;
 }
 
 function ExperienceHub(){
@@ -45,29 +45,30 @@ function ExperienceHub(){
 
 function Builder(){
  const [title,setTitle]=useState("Escolha que revela valor"); const [question,setQuestion]=useState("Qual destas opções você escolheria?"); const [items,setItems]=useState<Item[]>(starter);
- const [offerTitle,setOfferTitle]=useState("Quer vender mais pelo valor e não pelo preço?"); const [offerDescription,setOfferDescription]=useState("Conheça nossa solução e transforme esta dinâmica em resultados para sua equipe."); const [offerUrl,setOfferUrl]=useState(""); const [offerButton,setOfferButton]=useState("Quero conhecer"); const [hide,setHide]=useState(true); const [busy,setBusy]=useState(false); const [created,setCreated]=useState<{slug:string;adminToken:string}|null>(null); const [error,setError]=useState("");
+ const [offerTitle,setOfferTitle]=useState("Quer vender mais pelo valor e não pelo preço?"); const [offerDescription,setOfferDescription]=useState("Conheça nossa solução e transforme esta dinâmica em resultados para sua equipe."); const [offerUrl,setOfferUrl]=useState(""); const [offerButton,setOfferButton]=useState("Quero conhecer"); const [hide,setHide]=useState(true); const [busy,setBusy]=useState(false); const [created,setCreated]=useState<{slug:string}|null>(null); const [error,setError]=useState("");
  const categories=[...new Set(items.map(i=>i.category).filter(Boolean))];
  const update=(i:number,k:keyof Item,v:string)=>setItems(a=>a.map((x,n)=>n===i?{...x,[k]:v}:x));
  const renameCategory=(oldName:string,newName:string)=>setItems(a=>a.map(x=>x.category===oldName?{...x,category:newName}:x));
  const addCategory=()=>{if(items.length>17)return;let n=categories.length+1,name=`Nova categoria ${n}`;while(categories.includes(name)){n++;name=`Nova categoria ${n}`}setItems(a=>[...a,{name:"Opção premium",category:name,price:"Alto"},{name:"Opção intermediária",category:name,price:"Médio"},{name:"Opção econômica",category:name,price:"Baixo"}])};
  const create=async()=>{setBusy(true);setError("");try{const r=await fetch("/api/campaigns",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({title,question,options:items,offerTitle,offerDescription,offerUrl,offerButton,hideResults:hide})});const d=await r.json();if(!r.ok)throw new Error(d.error);setCreated(d)}catch(e){setError(e instanceof Error?e.message:"Não foi possível criar.")}finally{setBusy(false)}};
  const base=typeof location!=="undefined"?location.origin+location.pathname:"";
- if(created){const vote=`${base}?p=${created.slug}`,admin=`${base}?p=${created.slug}&admin=${created.adminToken}`;return <main className="center"><section className="success"><div className="successIcon">✓</div><p className="eyebrow">CAMPANHA PUBLICADA</p><h1>Seu link está pronto</h1><p>Envie o primeiro link aos participantes. Guarde o segundo para administrar e acompanhar os resultados.</p><LinkBox label="Link para votação" value={vote}/><LinkBox label="Seu painel administrativo" value={admin}/><div className="successActions"><a className="btn primary" href={admin}>Abrir meu painel</a><a className="btn secondary" href={vote}>Ver como participante</a></div></section></main>}
+ if(created){const vote=`${base}?p=${created.slug}`;return <main className="center"><section className="success"><div className="successIcon">✓</div><p className="eyebrow">CAMPANHA PUBLICADA</p><h1>Seu link está pronto</h1><p>Compartilhe este link com os participantes. Quando você estiver conectado à sua conta, o mesmo endereço abre automaticamente o painel administrativo.</p><LinkBox label="Link da votação" value={vote}/><div className="successActions"><a className="btn primary" href={vote}>Abrir meu painel</a><a className="btn secondary" href={vote}>Ver link compartilhável</a></div></section></main>}
  return <><Header/><main className="container"><div className="hero"><p className="eyebrow">CRIE • COMPARTILHE • CONVERTA</p><h1>Uma votação que abre<br/>a conversa para sua oferta.</h1><p>Monte a dinâmica, envie o link aos celulares e apresente seu produto logo após o voto.</p></div>{error&&<div className="alert">{error}</div>}<section className="panel"><Section n="01" title="Identidade da campanha" desc="O que os participantes verão ao abrir o link."/><div className="formGrid"><Field label="Nome da campanha"><input value={title} onChange={e=>setTitle(e.target.value)}/></Field><Field label="Pergunta principal"><input value={question} onChange={e=>setQuestion(e.target.value)}/></Field></div></section>
  <section className="categoriesSection"><div className="categoriesHeading"><Section n="02" title="Categorias da dinâmica" desc="Cada quadro representa uma escolha diferente para o participante."/><button className="btn secondary" disabled={items.length>17} onClick={addCategory}>＋ Adicionar categoria</button></div>{categories.map((category,categoryIndex)=>{const categoryItems=items.map((item,index)=>({item,index})).filter(x=>x.item.category===category);return <section className="panel categoryPanel" key={category}><div className="categoryEditorHead"><div><span className="categoryCount">CATEGORIA {String(categoryIndex+1).padStart(2,"0")}</span><input className="categoryName" value={category} onChange={e=>renameCategory(category,e.target.value)} aria-label="Nome da categoria"/></div><div className="categoryButtons"><button className="btn secondary" disabled={items.length>=20} onClick={()=>setItems(a=>[...a,{name:"",category,price:"Médio"}])}>＋ Adicionar opção</button><button className="btn textDanger" disabled={categories.length<=1} onClick={()=>setItems(a=>a.filter(x=>x.category!==category))}>Remover quadro</button></div></div><div className="optionList">{categoryItems.map(({item,index},localIndex)=><div className="optionEdit grouped" key={index}><span className="num">{String(localIndex+1).padStart(2,"0")}</span><Field label="Nome da opção"><input value={item.name} onChange={e=>update(index,"name",e.target.value)}/></Field><Field label="Preço"><select value={item.price} onChange={e=>update(index,"price",e.target.value)}><option>Alto</option><option>Médio</option><option>Baixo</option></select></Field><button className="remove" disabled={categoryItems.length<=1||items.length<=3} onClick={()=>setItems(a=>a.filter((_,n)=>n!==index))}>×</button></div>)}</div></section>})}</section>
  <section className="panel"><Section n="03" title="Sua oferta após o voto" desc="Transforme a participação em uma oportunidade comercial."/><div className="formGrid"><Field label="Título da oferta"><input value={offerTitle} onChange={e=>setOfferTitle(e.target.value)}/></Field><Field label="Texto curto"><textarea value={offerDescription} onChange={e=>setOfferDescription(e.target.value)}/></Field><Field label="Link do produto, WhatsApp ou checkout"><input type="url" placeholder="https://..." value={offerUrl} onChange={e=>setOfferUrl(e.target.value)}/></Field><Field label="Texto do botão"><input value={offerButton} onChange={e=>setOfferButton(e.target.value)}/></Field></div></section>
  <section className="launch"><label><input type="checkbox" checked={hide} onChange={e=>setHide(e.target.checked)}/><span><strong>Ocultar resultados enquanto a votação estiver aberta</strong><small>Ajuda a evitar influência entre os participantes.</small></span></label><button className="btn primary big" disabled={busy} onClick={create}>{busy?"Criando campanha...":"Criar link de votação →"}</button></section></main><Footer/></>;
 }
 
-function CampaignView({slug,admin}:{slug:string;admin:string}){
+function CampaignView({slug,legacyAdmin}:{slug:string;legacyAdmin:string}){
+ const legacyClaimed=useRef(false);
  const [campaign,setCampaign]=useState<Campaign|null>(null),[items,setItems]=useState<Item[]>([]),[total,setTotal]=useState(0),[selected,setSelected]=useState<Record<string,number>>({}),[voted,setVoted]=useState(false),[error,setError]=useState("");
  const [started,setStarted]=useState(false),[name,setName]=useState(""),[email,setEmail]=useState(""),[leads,setLeads]=useState<Lead[]>([]),[opinions,setOpinions]=useState<Opinion[]>([]),[feedbackDone,setFeedbackDone]=useState(false),[linkCopied,setLinkCopied]=useState(false);
- const load=useCallback(async()=>{const r=await fetch(`/api/campaigns/${encodeURIComponent(slug)}${admin?`?admin=${encodeURIComponent(admin)}`:""}`,{cache:"no-store"});const d=await r.json();if(r.ok){setCampaign(d.campaign);setItems(d.options);setTotal(d.total||0);setLeads(d.participants||[]);setOpinions(d.feedback||[])}else setError(d.error)},[slug,admin]);
+ const load=useCallback(async()=>{if(legacyAdmin&&!legacyClaimed.current){legacyClaimed.current=true;await fetch(`/api/campaigns/${encodeURIComponent(slug)}/claim`,{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({legacyToken:legacyAdmin})})}const r=await fetch(`/api/campaigns/${encodeURIComponent(slug)}`,{cache:"no-store"});const d=await r.json();if(r.ok){setCampaign(d.campaign);setItems(d.options);setTotal(d.total||0);setLeads(d.participants||[]);setOpinions(d.feedback||[])}else setError(d.error)},[slug,legacyAdmin]);
  useEffect(()=>{load();const t=setInterval(load,5000);return()=>clearInterval(t)},[load]);
  useEffect(()=>{setVoted(localStorage.getItem(`voted-${slug}`)==="1");setFeedbackDone(localStorage.getItem(`feedback-${slug}`)==="1")},[slug]);
  const submit=async()=>{if(Object.keys(selected).length!==grouped.length)return;let voter=localStorage.getItem("voter-id");if(!voter){voter=uid();localStorage.setItem("voter-id",voter)}const r=await fetch(`/api/campaigns/${slug}/vote`,{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({selections:Object.values(selected),voterId:voter,name,email})});const d=await r.json();if(r.ok){localStorage.setItem(`voted-${slug}`,"1");setVoted(true);load()}else setError(d.error)};
- const action=async(a:string)=>{const r=await fetch(`/api/campaigns/${slug}`,{method:"PATCH",headers:{"content-type":"application/json"},body:JSON.stringify({adminToken:admin,action:a})});if(!r.ok)return;setCampaign(current=>current?{...current,closed:a==="close"?true:a==="reopen"?false:current.closed,feedbackOpen:a==="feedback"?true:a==="close"||a==="endFeedback"?false:current.feedbackOpen}:current);setTimeout(load,300)};
- const share=()=>navigator.share?navigator.share({title:campaign?.title,url:location.href.split("&admin=")[0]}):navigator.clipboard.writeText(location.href.split("&admin=")[0]);
+ const action=async(a:string)=>{const r=await fetch(`/api/campaigns/${slug}`,{method:"PATCH",headers:{"content-type":"application/json"},body:JSON.stringify({action:a})});if(!r.ok)return;setCampaign(current=>current?{...current,closed:a==="close"?true:a==="reopen"?false:current.closed,feedbackOpen:a==="feedback"?true:a==="close"||a==="endFeedback"?false:current.feedbackOpen}:current);setTimeout(load,300)};
+ const share=()=>navigator.share?navigator.share({title:campaign?.title,url:location.href}):navigator.clipboard.writeText(location.href);
  const copyVoteLink=async()=>{const url=`${location.origin}${location.pathname}?p=${encodeURIComponent(slug)}`;await navigator.clipboard.writeText(url);setLinkCopied(true);setTimeout(()=>setLinkCopied(false),2200)};
  const grouped=useMemo(()=>[...new Set(items.map(i=>i.category))].map(category=>({category,items:items.filter(i=>i.category===category)})),[items]);
  if(error&&!campaign)return <main className="center"><section className="success"><h1>Não foi possível abrir</h1><p>{error}</p></section></main>;if(!campaign)return <main className="center"><div className="loader"/></main>;

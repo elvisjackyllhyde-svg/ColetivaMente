@@ -19,6 +19,6 @@ export async function POST(request: Request) {
     const slug = `${slugify(title) || "sorteio"}-${crypto.randomUUID().slice(0, 6)}`;
     const adminToken = crypto.randomUUID();
     const [raffle] = await db.insert(raffles).values({ slug, adminToken, creatorUserId: user.id, title, prizeTitle, prizeDescription, winnersCount }).returning();
-    return Response.json({ slug: raffle.slug, adminToken }, { status: 201 });
+    return Response.json({ slug: raffle.slug }, { status: 201 });
   } catch (error) { return Response.json({ error: error instanceof Error ? error.message : "Não foi possível criar o sorteio." }, { status: 500 }); }
 }

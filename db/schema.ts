@@ -5,6 +5,7 @@ export const campaigns = sqliteTable("campaigns", {
   id: integer("id").primaryKey({ autoIncrement: true }),
   slug: text("slug").notNull().unique(),
   adminToken: text("admin_token").notNull(),
+  creatorUserId: integer("creator_user_id"),
   title: text("title").notNull(),
   question: text("question").notNull(),
   offerTitle: text("offer_title").notNull().default(""),
