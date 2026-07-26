@@ -127,6 +127,7 @@ export const rooms = sqliteTable("rooms", {
   id: integer("id").primaryKey({ autoIncrement: true }),
   code: text("code").notNull().unique(),
   hostKey: text("host_key").notNull(),
+  creatorUserId: integer("creator_user_id"),
   status: text("status").notNull().default("lobby"),
   questionIndex: integer("question_index").notNull().default(-1),
   startedAt: integer("started_at"),
