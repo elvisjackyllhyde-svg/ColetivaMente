@@ -3,6 +3,7 @@ import { getDb } from "../../../../db";
 import { getCurrentUser } from "../../../../db/auth";
 import { csrfError, verifyCsrf } from "../../../../db/csrf";
 import { raffleEntries, raffles, raffleWinnerHistory } from "../../../../db/schema";
+import { writeAuditEvent } from "../../../../lib/audit";
 
 export async function GET(request: Request, { params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params; const db = getDb();
@@ -39,7 +40,10 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ sl
   if (!user) return Response.json({ error: "Entre na sua conta para administrar este sorteio." }, { status: 401 });
   if (!(await verifyCsrf(request, db))) return csrfError();
   const [raffle] = await db.select().from(raffles).where(eq(raffles.slug, slug)).limit(1);
-  if (!raffle || (!user.isAdmin && raffle.creatorUserId !== user.id)) return Response.json({ error: "Acesso administrativo inválido." }, { status: 403 });
+  if (!raffle || (!user.isAdmin && raffle.creatorUserId !== user.id)) {
+    await writeAuditEvent({ request, category: "security", action: "raffle_admin_denied", severity: "critical", actorUserId: user.id, resourceType: "raffle", resourceId: slug });
+    return Response.json({ error: "Acesso administrativo inválido." }, { status: 403 });
+  }
   if (body.action === "draw") {
     const entries = await db.select().from(raffleEntries).where(eq(raffleEntries.raffleId, raffle.id));
     if (entries.length === 0) return Response.json({ error: "Ainda não há participantes inscritos." }, { status: 400 });
@@ -56,5 +60,6 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ sl
     await db.update(raffleEntries).set({ isWinner: false, winnerPosition: null }).where(eq(raffleEntries.raffleId, raffle.id));
     await db.update(raffles).set({ closed: false }).where(eq(raffles.id, raffle.id));
   }
+  await writeAuditEvent({ request, category: "admin", action: `raffle_${body.action || "unknown"}`, actorUserId: user.id, resourceType: "raffle", resourceId: slug });
   return Response.json({ ok: true });
 }

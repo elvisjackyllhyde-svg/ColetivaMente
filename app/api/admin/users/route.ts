@@ -3,6 +3,7 @@ import { getDb } from "../../../../db";
 import { getCurrentUser } from "../../../../db/auth";
 import { users } from "../../../../db/schema";
 import { csrfError, verifyCsrf } from "../../../../db/csrf";
+import { writeAuditEvent } from "../../../../lib/audit";
 
 async function requireAdmin(request: Request) {
   const db = getDb();
@@ -41,5 +42,6 @@ export async function PATCH(request: Request) {
   }
   if (!Object.keys(update).length) return Response.json({ error: "Nenhuma alteração informada." }, { status: 400 });
   await auth.db.update(users).set(update).where(eq(users.id, userId));
+  await writeAuditEvent({ request, category: body.access ? "access" : "admin", action: body.access ? "admin_access_changed" : "admin_revenue_adjusted", actorUserId: auth.currentUser.id, targetUserId: userId, resourceType: "user", resourceId: userId, metadata: { access: body.access || null, totalPaidCents: update.totalPaidCents ?? null, subscriptionStatus: update.subscriptionStatus || null, subscriptionExpiresAt: update.subscriptionExpiresAt || null } });
   return Response.json({ ok: true });
 }

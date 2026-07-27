@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { integer, sqliteTable, text, uniqueIndex } from "drizzle-orm/sqlite-core";
+import { index, integer, sqliteTable, text, uniqueIndex } from "drizzle-orm/sqlite-core";
 
 export const campaigns = sqliteTable("campaigns", {
   id: integer("id").primaryKey({ autoIncrement: true }),
@@ -122,6 +122,25 @@ export const loginRateLimits = sqliteTable("login_rate_limits", {
   blockedUntil: text("blocked_until"),
   updatedAt: text("updated_at").notNull().default(sql`CURRENT_TIMESTAMP`),
 });
+
+export const auditLogs = sqliteTable("audit_logs", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  category: text("category").notNull(),
+  action: text("action").notNull(),
+  severity: text("severity").notNull().default("info"),
+  actorUserId: integer("actor_user_id").references(() => users.id),
+  targetUserId: integer("target_user_id").references(() => users.id),
+  resourceType: text("resource_type").notNull().default(""),
+  resourceId: text("resource_id").notNull().default(""),
+  ipHash: text("ip_hash").notNull().default(""),
+  userAgent: text("user_agent").notNull().default(""),
+  metadataJson: text("metadata_json").notNull().default("{}"),
+  createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+}, table => ({
+  createdAtIndex: index("audit_logs_created_at_idx").on(table.createdAt),
+  categoryIndex: index("audit_logs_category_idx").on(table.category),
+  actorIndex: index("audit_logs_actor_idx").on(table.actorUserId),
+}));
 
 export const payments = sqliteTable("payments", {
   id: integer("id").primaryKey({ autoIncrement: true }),

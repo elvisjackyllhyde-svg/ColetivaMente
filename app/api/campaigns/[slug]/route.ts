@@ -3,6 +3,7 @@ import { getDb } from "../../../../db";
 import { getCurrentUser } from "../../../../db/auth";
 import { csrfError, verifyCsrf } from "../../../../db/csrf";
 import { campaigns, feedback, options, participants, votes } from "../../../../db/schema";
+import { writeAuditEvent } from "../../../../lib/audit";
 
 const ownsCampaign = (user: Awaited<ReturnType<typeof getCurrentUser>>, creatorUserId: number | null) =>
   Boolean(user && (user.isAdmin || user.id === creatorUserId));
@@ -29,11 +30,15 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ sl
   if (!user) return Response.json({ error: "Entre na sua conta para administrar esta pesquisa." }, { status: 401 });
   if (!(await verifyCsrf(request, db))) return csrfError();
   const [campaign] = await db.select().from(campaigns).where(eq(campaigns.slug, slug)).limit(1);
-  if (!campaign || !ownsCampaign(user, campaign.creatorUserId)) return Response.json({ error: "Acesso administrativo inválido." }, { status: 403 });
+  if (!campaign || !ownsCampaign(user, campaign.creatorUserId)) {
+    await writeAuditEvent({ request, category: "security", action: "campaign_admin_denied", severity: "critical", actorUserId: user.id, resourceType: "campaign", resourceId: slug });
+    return Response.json({ error: "Acesso administrativo inválido." }, { status: 403 });
+  }
   if (body.action === "close") await db.update(campaigns).set({ closed: true, feedbackOpen: false }).where(eq(campaigns.id, campaign.id));
   if (body.action === "reopen") await db.update(campaigns).set({ closed: false }).where(eq(campaigns.id, campaign.id));
   if (body.action === "feedback") await db.update(campaigns).set({ feedbackOpen: true }).where(eq(campaigns.id, campaign.id));
   if (body.action === "endFeedback") await db.update(campaigns).set({ feedbackOpen: false }).where(eq(campaigns.id, campaign.id));
   if (body.action === "reset") { await db.delete(feedback).where(eq(feedback.campaignId, campaign.id)); await db.delete(votes).where(eq(votes.campaignId, campaign.id)); await db.update(campaigns).set({ closed: false, feedbackOpen: false }).where(eq(campaigns.id, campaign.id)); }
+  await writeAuditEvent({ request, category: "admin", action: `campaign_${body.action || "unknown"}`, actorUserId: user.id, resourceType: "campaign", resourceId: slug });
   return Response.json({ ok: true });
 }
