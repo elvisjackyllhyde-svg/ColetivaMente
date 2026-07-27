@@ -13,7 +13,7 @@ function RaffleHeader({ title = "Sorteio" }: { title?: string }) {
   return <header className="rHeader"><a className="rBrand" href="/"><span className="rBrandMark" aria-hidden="true"><svg viewBox="0 0 48 48"><path d="M16 10h16v7c0 7-3.6 11.5-8 11.5S16 24 16 17v-7Z"/><path d="M16 14h-5v3c0 4 2.4 7 6.2 7.7M32 14h5v3c0 4-2.4 7-6.2 7.7M24 29v6M17 39h14M20 35h8"/><path className="rSpark" d="m37.5 7 .8 2.2 2.2.8-2.2.8-.8 2.2-.8-2.2-2.2-.8 2.2-.8.8-2.2ZM10 27l.7 1.8 1.8.7-1.8.7L10 32l-.7-1.8-1.8-.7 1.8-.7L10 27Z"/></svg></span><div><strong>{title}</strong><small>SORTEIO CORPORATIVO</small></div></a></header>;
 }
 function RaffleFooter() {
-  return <footer className="rFooter">ColetivaMente · Dinâmicas que aproximam equipes</footer>;
+  return <footer className="rFooter">ColetivaMente · Dinâmicas que aproximam equipes · <a href="/?modo=privacidade">Privacidade</a></footer>;
 }
 
 export function RaffleBuilder() {
@@ -65,7 +65,7 @@ export function RaffleView({ slug, legacyAdmin }: { slug: string; legacyAdmin: s
   const [accountHistory, setAccountHistory] = useState<AccountHistoryWinner[]>([]);
   const [error, setError] = useState("");
   const [entered, setEntered] = useState(false);
-  const [name, setName] = useState(""); const [email, setEmail] = useState("");
+  const [name, setName] = useState(""); const [email, setEmail] = useState(""); const [consent, setConsent] = useState(false);
   const [busy, setBusy] = useState(false); const [drawing, setDrawing] = useState(false);
   const [manualName, setManualName] = useState(""); const [addingManual, setAddingManual] = useState(false);
   const [sharedDraw, setSharedDraw] = useState("");
@@ -88,7 +88,7 @@ export function RaffleView({ slug, legacyAdmin }: { slug: string; legacyAdmin: s
   const enter = async () => {
     setBusy(true); setError("");
     try {
-      const r = await fetch(`/api/raffles/${slug}/enter`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ name, email }) });
+      const r = await fetch(`/api/raffles/${slug}/enter`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ name, email, consent }) });
       const d = await r.json();
       if (!r.ok) throw new Error(d.error);
       localStorage.setItem(`raffle-entered-${slug}`, "1"); setEntered(true); load();
@@ -184,5 +184,5 @@ export function RaffleView({ slug, legacyAdmin }: { slug: string; legacyAdmin: s
     return <><RaffleHeader title={info.title} /><main className="rCenter"><section className="rSuccess"><div className="rSuccessIcon">✓</div><p className="rEyebrow">INSCRIÇÃO CONFIRMADA</p><h1>Você está concorrendo!</h1><p>{entryCount} pessoa{entryCount !== 1 ? "s" : ""} inscrita{entryCount !== 1 ? "s" : ""} até agora. O resultado aparece aqui assim que o sorteio for realizado.</p></section></main><RaffleFooter /></>;
   }
 
-  return <><RaffleHeader title={info.title} /><main className="rCenter"><section className="rSuccess"><p className="rEyebrow">{info.prizeTitle}</p><h1>Participe do sorteio</h1><p>{info.prizeDescription}</p>{error && <div className="rAlert">{error}</div>}<div className="rEntryFields"><Field label="Seu nome completo"><input autoFocus value={name} onChange={e => setName(e.target.value)} placeholder="Ex.: João da Silva" /></Field><Field label="Seu melhor e-mail"><input type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="voce@empresa.com" /></Field></div><button className="rBtn primary big" disabled={busy || name.trim().length < 3 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)} onClick={enter}>{busy ? "Confirmando..." : "Quero concorrer →"}</button></section></main><RaffleFooter /></>;
+  return <><RaffleHeader title={info.title} /><main className="rCenter"><section className="rSuccess"><p className="rEyebrow">{info.prizeTitle}</p><h1>Participe do sorteio</h1><p>{info.prizeDescription}</p>{error && <div className="rAlert">{error}</div>}<div className="rEntryFields"><Field label="Seu nome completo"><input autoFocus value={name} onChange={e => setName(e.target.value)} placeholder="Ex.: João da Silva" /></Field><Field label="Seu melhor e-mail"><input type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="voce@empresa.com" /></Field></div><label className="privacyConsent"><input type="checkbox" checked={consent} onChange={e => setConsent(e.target.checked)}/><span>Concordo com a <a href="/?modo=privacidade" target="_blank">Política de Privacidade</a> e autorizo o uso dos dados para este sorteio.</span></label><button className="rBtn primary big" disabled={busy || !consent || name.trim().length < 3 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)} onClick={enter}>{busy ? "Confirmando..." : "Quero concorrer →"}</button></section></main><RaffleFooter /></>;
 }

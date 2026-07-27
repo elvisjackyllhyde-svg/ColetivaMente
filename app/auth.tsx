@@ -98,12 +98,13 @@ export function LoginPage() {
 
 export function SignupPage() {
   const [name, setName] = useState(""); const [company, setCompany] = useState(""); const [email, setEmail] = useState(""); const [password, setPassword] = useState("");
+  const [consent, setConsent] = useState(false);
   const [busy, setBusy] = useState(false); const [error, setError] = useState("");
 
   const submit = async () => {
     setBusy(true); setError("");
     try {
-      const r = await fetch("/api/auth/signup", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ name, company, email, password }) });
+      const r = await fetch("/api/auth/signup", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ name, company, email, password, consent }) });
       const d = await r.json();
       if (!r.ok) throw new Error(d.error);
       if (d.created) { alert(d.emailSent ? "Conta criada. Abra seu e-mail para confirmar o cadastro." : "Conta criada, mas o envio de e-mail ainda não está configurado. Fale com o administrador."); location.href = "/?modo=login"; return; }
@@ -112,7 +113,7 @@ export function SignupPage() {
     finally { setBusy(false); }
   };
 
-  const valid = name.trim().length >= 2 && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) && password.length >= 8;
+  const valid = name.trim().length >= 2 && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) && password.length >= 8 && consent;
 
   return <><AuthHeader /><main className="aCenter"><section className="aCard">
     <p className="aEyebrow">CRIAR CONTA</p><h1>Comece agora</h1>
@@ -123,6 +124,7 @@ export function SignupPage() {
       <Field label="E-mail"><input type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="voce@empresa.com" /></Field>
       <Field label="Senha"><input type="password" value={password} onChange={e => setPassword(e.target.value)} placeholder="Mínimo 8 caracteres" /></Field>
     </div>
+    <label className="aConsent"><input type="checkbox" checked={consent} onChange={e => setConsent(e.target.checked)} /><span>Li e concordo com a <a href="/?modo=privacidade" target="_blank">Política de Privacidade</a> e com o tratamento dos meus dados para criar e administrar minha conta.</span></label>
     <button className="aBtn primary big" disabled={busy || !valid} onClick={submit}>{busy ? "Criando conta..." : "Criar conta →"}</button>
     <p className="aSwitch">Já tem conta? <a href="/?modo=login">Entrar</a></p>
   </section></main></>;

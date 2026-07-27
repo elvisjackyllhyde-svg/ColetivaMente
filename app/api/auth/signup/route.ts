@@ -14,11 +14,13 @@ export async function POST(request: Request) {
     const company = String(body.company || "").trim().slice(0, 100);
     const email = String(body.email || "").trim().toLowerCase().slice(0, 120);
     const password = String(body.password || "");
+    const consent = body.consent === true;
     if (!name || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return Response.json({ error: "Informe nome e e-mail válidos." }, { status: 400 });
     if (password.length < 8) return Response.json({ error: "A senha precisa ter pelo menos 8 caracteres." }, { status: 400 });
+    if (!consent) return Response.json({ error: "Leia e aceite a Política de Privacidade para criar a conta." }, { status: 400 });
     const db = getDb();
     const passwordHash = await hashPassword(password);
-    const [user] = await db.insert(users).values({ name, company, email, passwordHash }).returning();
+    const [user] = await db.insert(users).values({ name, company, email, passwordHash, privacyAcceptedAt: new Date().toISOString() }).returning();
     const token = await createAuthToken(db, user.id, "verify_email", 24 * 60);
     const link = `${new URL(request.url).origin}/?modo=verificar-email&token=${token}`;
     const sent = await sendAccountEmail(email, "Confirme seu e-mail — ColetivaMente", `<h2>Confirme seu e-mail</h2><p>Olá, ${name}. Clique no botão para ativar sua conta:</p><p><a href="${link}">Confirmar meu e-mail</a></p><p>O link expira em 24 horas.</p>`);

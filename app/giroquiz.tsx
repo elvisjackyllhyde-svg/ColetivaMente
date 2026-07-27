@@ -56,6 +56,7 @@ export function GiroQuizApp() {
   const [code, setCode] = useState("");
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
+  const [consent, setConsent] = useState(false);
   const [hostKey, setHostKey] = useState("");
   const [playerKey, setPlayerKey] = useState("");
   const [playerId, setPlayerId] = useState<number | null>(null);
@@ -161,10 +162,10 @@ export function GiroQuizApp() {
 
   const joinRoom = async () => {
     unlockAudio();
-    if (code.length !== 6 || name.trim().length < 2 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { setError("Informe o código da sala, seu nome e um e-mail válido."); return; }
+    if (code.length !== 6 || name.trim().length < 2 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || !consent) { setError("Informe o código da sala, seu nome, um e-mail válido e aceite a Política de Privacidade."); return; }
     setLoading(true); setError("");
     try {
-      const res = await fetch(`/api/rooms/${code}/join`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ name, email }) });
+      const res = await fetch(`/api/rooms/${code}/join`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ name, email, consent }) });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "No fue posible entrar.");
       setPlayerId(data.playerId); setPlayerKey(data.playerKey); setScreen("player");
@@ -219,13 +220,14 @@ export function GiroQuizApp() {
             <input maxLength={24} value={name} onChange={e => setName(e.target.value)} placeholder="Como você quer aparecer?" onKeyDown={e => e.key === "Enter" && joinRoom()} />
             <label>Seu melhor e-mail</label>
             <input type="email" maxLength={120} autoComplete="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="voce@empresa.com" onKeyDown={e => e.key === "Enter" && joinRoom()} />
-            <button className="primary" onClick={joinRoom} disabled={loading}>{loading ? "Entrando…" : "Jogar agora"}</button>
+            <label className="privacyConsent"><input type="checkbox" checked={consent} onChange={e=>setConsent(e.target.checked)}/><span>Concordo com a <a href="/?modo=privacidade" target="_blank">Política de Privacidade</a> e autorizo o uso dos dados para esta dinâmica.</span></label>
+            <button className="primary" onClick={joinRoom} disabled={loading || !consent}>{loading ? "Entrando…" : "Jogar agora"}</button>
           </div>
         )}
         {error && <div className="error" role="alert">{error}</div>}
       </section>
       <div className="scorePreview"><span>+1000</span><small>perguntas</small></div>
-      <footer>GiroQuiz · Avaliação dinâmica para palestras e treinamentos</footer>
+      <footer>GiroQuiz · Avaliação dinâmica para palestras e treinamentos · <a href="/?modo=privacidade">Privacidade</a></footer>
     </main></div>
   );
 

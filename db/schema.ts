@@ -34,6 +34,7 @@ export const participants = sqliteTable("participants", {
   name: text("name").notNull(),
   email: text("email").notNull(),
   createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+  consentedAt: text("consented_at").notNull().default(""),
 }, table => ({ uniqueEmail: uniqueIndex("one_email_per_campaign").on(table.campaignId, table.email) }));
 
 export const votes = sqliteTable("votes", {
@@ -66,6 +67,7 @@ export const raffleEntries = sqliteTable("raffle_entries", {
   isWinner: integer("is_winner", { mode: "boolean" }).notNull().default(false),
   winnerPosition: integer("winner_position"),
   createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+  consentedAt: text("consented_at").notNull().default(""),
 }, table => ({ uniqueEmail: uniqueIndex("one_email_per_raffle").on(table.raffleId, table.email) }));
 
 export const raffleWinnerHistory = sqliteTable("raffle_winner_history", {
@@ -92,6 +94,7 @@ export const users = sqliteTable("users", {
   emailVerifiedAt: text("email_verified_at").notNull().default(""),
   twoFactorSecret: text("two_factor_secret").notNull().default(""),
   twoFactorEnabled: integer("two_factor_enabled", { mode: "boolean" }).notNull().default(false),
+  privacyAcceptedAt: text("privacy_accepted_at").notNull().default(""),
   createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
 });
 
@@ -176,6 +179,7 @@ export const players = sqliteTable("players", {
   email: text("email").notNull().default(""),
   score: integer("score").notNull().default(0),
   joinedAt: integer("joined_at").notNull(),
+  consentedAt: text("consented_at").notNull().default(""),
 }, table => ({ uniqueName: uniqueIndex("player_room_name").on(table.roomId, table.name) }));
 
 export const quizAnswers = sqliteTable("answers", {
