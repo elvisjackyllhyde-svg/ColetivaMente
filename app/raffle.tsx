@@ -9,8 +9,8 @@ type Winner = { name: string };
 type HistoryWinner = { drawId: string; name: string; position: number; drawnAt: string };
 type AccountHistoryWinner = HistoryWinner & { raffleTitle: string; raffleSlug: string };
 
-function RaffleHeader({ title = "Sorteio" }: { title?: string }) {
-  return <header className="rHeader"><a className="rBrand" href="/"><span className="rBrandMark" aria-hidden="true"><svg viewBox="0 0 48 48"><path d="M16 10h16v7c0 7-3.6 11.5-8 11.5S16 24 16 17v-7Z"/><path d="M16 14h-5v3c0 4 2.4 7 6.2 7.7M32 14h5v3c0 4-2.4 7-6.2 7.7M24 29v6M17 39h14M20 35h8"/><path className="rSpark" d="m37.5 7 .8 2.2 2.2.8-2.2.8-.8 2.2-.8-2.2-2.2-.8 2.2-.8.8-2.2ZM10 27l.7 1.8 1.8.7-1.8.7L10 32l-.7-1.8-1.8-.7 1.8-.7L10 27Z"/></svg></span><div><strong>{title}</strong><small>SORTEIO CORPORATIVO</small></div></a></header>;
+function RaffleHeader({ title = "Sorteio", activities = false }: { title?: string; activities?: boolean }) {
+  return <header className="rHeader"><a className="rBrand" href="/"><span className="rBrandMark" aria-hidden="true"><svg viewBox="0 0 48 48"><path d="M16 10h16v7c0 7-3.6 11.5-8 11.5S16 24 16 17v-7Z"/><path d="M16 14h-5v3c0 4 2.4 7 6.2 7.7M32 14h5v3c0 4-2.4 7-6.2 7.7M24 29v6M17 39h14M20 35h8"/><path className="rSpark" d="m37.5 7 .8 2.2 2.2.8-2.2.8-.8 2.2-.8-2.2-2.2-.8 2.2-.8.8-2.2ZM10 27l.7 1.8 1.8.7-1.8.7L10 32l-.7-1.8-1.8-.7 1.8-.7L10 27Z"/></svg></span><div><strong>{title}</strong><small>SORTEIO CORPORATIVO</small></div></a>{activities && <a className="rActivitiesLink" href="/?modo=conta">← Minhas atividades</a>}</header>;
 }
 function RaffleFooter() {
   return <footer className="rFooter">ColetivaMente · Dinâmicas que aproximam equipes · <a href="/?modo=privacidade">Privacidade</a></footer>;
@@ -159,7 +159,7 @@ export function RaffleView({ slug, legacyAdmin }: { slug: string; legacyAdmin: s
     const visibleHistory: AccountHistoryWinner[] = accountHistory.length ? accountHistory : history.map(item => ({ ...item, raffleTitle: info.title, raffleSlug: slug }));
     const historyRounds = Array.from(visibleHistory.reduce((groups, item) => { const key = `${item.raffleSlug}:${item.drawId}`; const group = groups.get(key) || []; group.push(item); groups.set(key, group); return groups; }, new Map<string, AccountHistoryWinner[]>()).values()).reverse();
     const latestCurrentRound = historyRounds.find(round => round[0].raffleSlug === slug);
-    return <><RaffleHeader title={info.title} /><main className="rContainer rAdmin">
+    return <><RaffleHeader title={info.title} activities /><main className="rContainer rAdmin">
       <div className="rHero"><p className="rEyebrow">PAINEL DO SORTEIO</p><h1>{info.title}</h1><p>{info.prizeTitle} · {info.winnersCount} ganhador{info.winnersCount > 1 ? "es" : ""}</p></div>
       <section className="rKpis"><article><span>INSCRITOS</span><strong>{entryCount}</strong></article><article><span>GANHADORES</span><strong>{winners.length || info.winnersCount}</strong></article></section>
       {error && <div className="rAlert">{error}</div>}
