@@ -4,19 +4,23 @@ import { getDb } from "../db";
 import { payments } from "../db/schema";
 
 type MercadoPagoEnv={DB:D1Database;MP_ACCESS_TOKEN?:string;MP_WEBHOOK_SECRET?:string};
-type MercadoPagoPayment={id:number|string;status:string;external_reference?:string;transaction_amount?:number;currency_id?:string;date_approved?:string};
+type MercadoPagoPayment={id:number|string;status:string;external_reference?:string;transaction_amount?:number;currency_id?:string;date_approved?:string;live_mode?:boolean};
 export const PLAN_AMOUNT_CENTS=12_000;
 export const PLAN_ACCESS_DAYS=30;
+export const PRODUCTION_ORIGIN="https://coletivamente.app";
 export const mpSecrets=()=>env as unknown as MercadoPagoEnv;
 export const webhookSecretConfigured=()=>Boolean(mpSecrets().MP_WEBHOOK_SECRET?.trim());
+export const usesProductionCredentials=()=>Boolean(mpSecrets().MP_ACCESS_TOKEN?.trim().startsWith("APP_USR-"));
 
 const hex=async(value:string,key:string)=>{const cryptoKey=await crypto.subtle.importKey("raw",new TextEncoder().encode(key),{name:"HMAC",hash:"SHA-256"},false,["sign"]);const signed=await crypto.subtle.sign("HMAC",cryptoKey,new TextEncoder().encode(value));return [...new Uint8Array(signed)].map(byte=>byte.toString(16).padStart(2,"0")).join("")};
-export async function validWebhookSignature(request:Request,dataId:string){const secret=mpSecrets().MP_WEBHOOK_SECRET?.trim();if(!secret)return false;const signature=request.headers.get("x-signature")||"",requestId=request.headers.get("x-request-id")||"",parts:Record<string,string>={};for(const part of signature.split(",")){const separator=part.indexOf("=");if(separator<1)continue;parts[part.slice(0,separator).trim()]=part.slice(separator+1).trim()}if(!parts.ts||!parts.v1||!requestId)return false;const expected=await hex(`id:${dataId};request-id:${requestId};ts:${parts.ts};`,secret);if(expected.length!==parts.v1.length)return false;let difference=0;for(let i=0;i<expected.length;i++)difference|=expected.charCodeAt(i)^parts.v1.charCodeAt(i);return difference===0}
+export async function verifyMercadoPagoSignature(signature:string,requestId:string,dataId:string,secret:string){const parts:Record<string,string>={};for(const part of signature.split(",")){const separator=part.indexOf("=");if(separator<1)continue;parts[part.slice(0,separator).trim().toLowerCase()]=part.slice(separator+1).trim().toLowerCase()}if(!/^\d{9,13}$/.test(parts.ts||"")||!/^[a-f0-9]{64}$/.test(parts.v1||"")||!requestId||requestId.length>200||!dataId)return false;const canonicalId=/[a-z]/i.test(dataId)?dataId.toLowerCase():dataId;const expected=await hex(`id:${canonicalId};request-id:${requestId};ts:${parts.ts};`,secret);let difference=expected.length===parts.v1.length?0:1;for(let i=0;i<Math.min(expected.length,parts.v1.length);i++)difference|=expected.charCodeAt(i)^parts.v1.charCodeAt(i);return difference===0}
+export async function validWebhookSignature(request:Request,dataId:string){const secret=mpSecrets().MP_WEBHOOK_SECRET?.trim();if(!secret)return false;return verifyMercadoPagoSignature(request.headers.get("x-signature")||"",request.headers.get("x-request-id")||"",dataId,secret)}
 
 export async function syncMercadoPagoPayment(paymentId:string){
  const token=mpSecrets().MP_ACCESS_TOKEN;if(!token)throw new Error("Mercado Pago ainda não configurado.");
  const response=await fetch(`https://api.mercadopago.com/v1/payments/${encodeURIComponent(paymentId)}`,{headers:{Authorization:`Bearer ${token}`}});if(!response.ok)throw new Error("Pagamento não encontrado no Mercado Pago.");
  const remote=await response.json() as MercadoPagoPayment;const reference=String(remote.external_reference||"");if(!reference)throw new Error("Pagamento sem referência.");
+ if(usesProductionCredentials()&&remote.live_mode!==true)throw new Error("Pagamento de teste recusado no ambiente de produção.");
  const db=getDb();const[local]=await db.select().from(payments).where(eq(payments.externalReference,reference)).limit(1);if(!local)throw new Error("Pagamento não pertence à plataforma.");
  const amountCents=Math.round(Number(remote.transaction_amount||0)*100);if(amountCents!==local.amountCents||remote.currency_id!==local.currency)throw new Error("O valor do pagamento não confere.");
  const normalized=remote.status==="approved"?"approved":remote.status||"pending";

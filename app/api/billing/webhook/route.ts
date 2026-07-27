@@ -2,6 +2,7 @@ import {
   syncMercadoPagoPayment,
   validWebhookSignature,
   webhookSecretConfigured,
+  usesProductionCredentials,
 } from "../../../../lib/mercado-pago";
 import { writeAuditEvent } from "../../../../lib/audit";
 
@@ -9,16 +10,21 @@ export async function POST(request: Request) {
   const url = new URL(request.url);
   const body = await request.clone().json().catch(() => ({})) as {
     type?: string;
+    live_mode?: boolean;
     data?: { id?: string | number };
   };
 
-  if (body.type && body.type !== "payment") {
-    return Response.json({ ok: true, ignored: true });
-  }
+  const eventType = body.type || url.searchParams.get("type") || url.searchParams.get("topic") || "";
 
+  const queryDataId = url.searchParams.get("data.id") || url.searchParams.get("id") || "";
+  const bodyDataId = String(body.data?.id || "");
+  if (queryDataId && bodyDataId && queryDataId !== bodyDataId) {
+    await writeAuditEvent({ request, category: "security", action: "payment_webhook_id_mismatch", severity: "critical", resourceType: "payment", resourceId: queryDataId });
+    return Response.json({ error: "Identificador da notificação inconsistente." }, { status: 400 });
+  }
   const dataId = String(
-    body.data?.id ||
-      url.searchParams.get("data.id") ||
+    queryDataId ||
+      bodyDataId ||
       url.searchParams.get("id") ||
       "",
   );
@@ -36,6 +42,16 @@ export async function POST(request: Request) {
   if (!(await validWebhookSignature(request, dataId))) {
     await writeAuditEvent({ request, category: "security", action: "payment_webhook_invalid_signature", severity: "critical", resourceType: "payment", resourceId: dataId });
     return Response.json({ error: "Assinatura inválida." }, { status: 401 });
+  }
+
+  if (usesProductionCredentials() && body.live_mode !== true) {
+    await writeAuditEvent({ request, category: "security", action: "payment_webhook_test_event_rejected", severity: "warning", resourceType: "payment", resourceId: dataId });
+    return Response.json({ error: "Notificação de teste recusada no ambiente de produção." }, { status: 400 });
+  }
+
+  if (eventType && eventType !== "payment") {
+    await writeAuditEvent({ request, category: "payment", action: "payment_webhook_topic_ignored", resourceType: eventType, resourceId: dataId });
+    return Response.json({ ok: true, ignored: true });
   }
 
   try {
