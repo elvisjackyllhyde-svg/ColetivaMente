@@ -7,6 +7,7 @@ body:has(.rHeader){background:radial-gradient(circle at 88% 8%,#ffe2b0 0,transpa
 .rCenter{min-height:calc(100vh - 78px);display:grid;place-items:center;padding:20px;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Inter,Roboto,sans-serif}
 .rContainer{width:min(900px,calc(100% - 32px));margin:0 auto 60px;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Inter,Roboto,sans-serif;color:#14161f}
 .rHero{text-align:center;padding:52px 15px 34px}.rHero h1{font:800 clamp(30px,4.4vw,46px)/1.1 sans-serif;margin:10px 0 12px;letter-spacing:-.02em}.rHero>p:last-child{color:#5b6270;font-size:16px;max-width:520px;margin:0 auto}
+.rBrand strong,.rHero h1,.rPanel h2,.rSuccess h1,.rEntryList h2,.rHistoryHead h2{color:#402719}.rBrand small{color:#7b6558}.rHero h1{background:linear-gradient(110deg,#3b2418,#a84210 70%,#df6b22);background-clip:text;-webkit-background-clip:text;-webkit-text-fill-color:transparent}.rHero>p:last-child,.rPanel p{color:#725f53}.rPanel .rEyebrow{color:#c45110}.rManualPanel h2{color:#44291a}.rEntryRow span{color:#3c291f}
 .rEyebrow{display:inline-flex;align-items:center;gap:8px;color:#d94f0e;font-size:11px;font-weight:800;letter-spacing:.13em;background:#fdefe4;padding:7px 15px;border-radius:99px}
 .rAlert{background:#fff2d6;border:1px solid #e5c77f;color:#754f08;padding:12px 15px;border-radius:10px;margin-bottom:15px}
 .rPanel{background:#fff;border:1px solid #e7e6f0;border-radius:18px;padding:clamp(20px,4vw,32px);box-shadow:0 12px 36px #14161f08;margin-bottom:16px}

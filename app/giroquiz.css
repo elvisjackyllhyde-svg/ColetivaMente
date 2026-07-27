@@ -107,6 +107,7 @@
 .gq .answer1{background:#9fd8cf}
 .gq .answer2{background:#f1a9cf}
 .gq .answer3{background:#a9c7f5}
+.gq .hero h1,.gq .creatorCard h1,.gq .lobby h1,.gq .podium h1,.gq .questionStage h1,.gq .playerQuestion h1{color:#2c195d}.gq .hero h1 em{background:linear-gradient(110deg,#5b3fd6,#8d68ef);background-clip:text;-webkit-background-clip:text;-webkit-text-fill-color:transparent}.gq .creatorFields label,.gq .joinCard label{color:#49328d}.gq .creatorFields input,.gq .joinCard input{color:#28194e}.gq .giroWord{color:#382376}.gq .giroWord strong{color:#7b55e7}.gq .roomCode,.gq .giantCode,.gq .playerCount{color:#5135be}
 .gq .revealedAnswers .answer{animation:gqAnswerPop .48s cubic-bezier(.2,.9,.25,1.25) both}
 .gq .revealedAnswers .answer:nth-child(2){animation-delay:.08s}
 .gq .revealedAnswers .answer:nth-child(3){animation-delay:.16s}
