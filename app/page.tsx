@@ -68,7 +68,7 @@ function Builder(){
 
 function VoteQrCode({value}:{value:string}){
  const [src,setSrc]=useState("");
- useEffect(()=>{let active=true;QRCode.toDataURL(value,{margin:2,width:360,errorCorrectionLevel:"H",color:{dark:"#8d5f0c",light:"#ffffff"}}).then(data=>{if(active)setSrc(data)}).catch(()=>{if(active)setSrc("")});return()=>{active=false}},[value]);
+ useEffect(()=>{let active=true;QRCode.toDataURL(value,{margin:2,width:360,errorCorrectionLevel:"H",color:{dark:"#145c42",light:"#ffffff"}}).then(data=>{if(active)setSrc(data)}).catch(()=>{if(active)setSrc("")});return()=>{active=false}},[value]);
  return <aside className="voteQr" aria-label="QR Code para acessar a votação"><span>ACESSO PELO CELULAR</span>{src?<img src={src} alt="QR Code com o link da votação"/>:<div className="voteQrLoading">Gerando QR Code...</div>}<strong>Aponte a câmera</strong><small>O participante entra diretamente na votação.</small></aside>;
 }
 
