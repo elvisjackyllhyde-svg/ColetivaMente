@@ -29,3 +29,4 @@
 .activityLibrary>header{height:auto;min-height:0;padding:0;border:0;background:transparent;backdrop-filter:none}
 .activityLibrary>header>div{min-width:0;flex:1}
 .activityLibrary header p:last-child{line-height:1.45}
+.activityItem{align-items:start}.activityItem>a{margin-top:28px}.activityQuestions{margin-top:11px;padding:11px 13px;border:1px solid #e1ddf5;border-radius:11px;background:linear-gradient(135deg,#faf9ff,#f4f0ff)}.activityQuestions>strong{display:block;color:#4b3f9f;font-size:9px;font-weight:900;letter-spacing:.1em;text-transform:uppercase;margin-bottom:7px}.activityQuestions ol{display:grid;gap:5px;margin:0;padding-left:20px}.activityQuestions li{padding-left:2px;color:#464b59;font-size:11px;line-height:1.35}.activityQuestions>small{display:block;margin-top:8px;color:#6c5fc0;font-size:9px;font-weight:800}@media(max-width:600px){.activityItem>a{margin-top:0}.activityQuestions{padding:10px}.activityQuestions li{font-size:10px}}
