@@ -78,8 +78,9 @@ export function GiroQuizApp() {
   const bgMusic = useRef<HTMLAudioElement | null>(null);
 
   useEffect(() => {
-    const sala = new URLSearchParams(location.search).get("sala");
+    const params = new URLSearchParams(location.search), sala = params.get("sala"), gerenciar = params.get("gerenciar");
     if (sala && /^\d{6}$/.test(sala)) { setCode(sala); setScreen("join"); }
+    else if (gerenciar && /^\d{6}$/.test(gerenciar)) fetch(`/api/rooms/${gerenciar}/resume`, { cache: "no-store" }).then(async response => { const data = await response.json(); if (!response.ok) throw new Error(data.error); setCode(gerenciar); setHostKey(data.hostKey); setScreen("host"); }).catch(error => setError(error instanceof Error ? error.message : "Não foi possível abrir esta partida."));
   }, []);
 
   const joinUrl = code ? `${location.origin}${location.pathname}?modo=quiz&sala=${code}` : "";

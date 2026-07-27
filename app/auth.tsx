@@ -178,7 +178,7 @@ export function AccountPage() {
   const days = remainingAccessDays(user);
   const lifetime = user.subscriptionStatus === "lifetime";
   const active = user.isAdmin || (days !== null && days > 0);
-  return <><AuthHeader /><main className="aCenter"><section className="aCard">
+  return <><AuthHeader /><main className="aCenter accountCenter"><div className="accountLayout"><section className="aCard">
     <p className="aEyebrow">MINHA CONTA</p><h1>Olá, {user.name.split(" ")[0]}</h1>
     {paymentMessage && <div className="aPaymentNotice">{paymentMessage}</div>}
     <div className="aStatusRow"><span>PLANO</span><b className={active ? "aActive" : "aInactive"}>{user.isAdmin ? "Admin — acesso total" : lifetime ? "Plano vitalício" : active ? "Assinatura ativa" : "Sem assinatura"}</b></div>
@@ -192,7 +192,17 @@ export function AccountPage() {
     {active && !user.isAdmin && !lifetime && <button className="aBtn secondary big" disabled={busy} onClick={subscribe}>{busy ? "Abrindo Mercado Pago..." : "Adicionar mais 30 dias"}</button>}
     {user.isAdmin && <a className="aBtn secondary big" href="/?modo=admin">Administrar contas</a>}
     <button className="aBtn textMuted" onClick={logout}>Sair da conta</button>
-  </section></main></>;
+  </section><ActivityLibrary /></div></main></>;
+}
+
+type AccountActivity={id:string;type:"quiz"|"vote"|"raffle";title:string;subtitle:string;status:string;createdAt:string;participants:number;interactions:number;url:string};
+
+function ActivityLibrary(){
+  const [activities,setActivities]=useState<AccountActivity[]>([]),[loading,setLoading]=useState(true),[error,setError]=useState(""),[filter,setFilter]=useState<"all"|AccountActivity["type"]>("all");
+  useEffect(()=>{fetch("/api/account/activities",{cache:"no-store"}).then(async response=>{const data=await response.json();if(!response.ok)throw new Error(data.error);setActivities(data.activities||[])}).catch(reason=>setError(reason instanceof Error?reason.message:"Não foi possível carregar suas atividades.")).finally(()=>setLoading(false))},[]);
+  const visible=filter==="all"?activities:activities.filter(activity=>activity.type===filter),labels={quiz:"GiroQuiz",vote:"Votação",raffle:"Sorteio"},icons={quiz:"?",vote:"✓",raffle:"★"};
+  const statusLabel=(activity:AccountActivity)=>activity.type==="quiz"?({lobby:"Aguardando",question:"Em andamento",reveal:"Em andamento",finished:"Finalizado",cancelled:"Encerrado"}[activity.status]||activity.status):activity.status==="feedback"?"2ª rodada":activity.status==="closed"?"Encerrado":"Aberto";
+  return <section className="activityLibrary"><header><div><p className="aEyebrow">SEU HISTÓRICO</p><h2>Minhas atividades</h2><p>Consulte e reabra os jogos, votações e sorteios criados por esta conta.</p></div><strong>{activities.length} registros</strong></header><nav aria-label="Filtrar atividades">{(["all","quiz","vote","raffle"] as const).map(type=><button className={filter===type?"active":""} onClick={()=>setFilter(type)} key={type}>{type==="all"?"Todos":labels[type]}</button>)}</nav>{loading?<div className="activityEmpty">Carregando suas atividades...</div>:error?<div className="aAlert">{error}</div>:visible.length===0?<div className="activityEmpty"><strong>Nenhuma atividade encontrada.</strong><span>Quando você criar uma dinâmica, ela aparecerá aqui automaticamente.</span></div>:<div className="activityList">{visible.map(activity=>{const date=new Date(activity.createdAt);return <article className={`activityItem ${activity.type}`} key={`${activity.type}-${activity.id}`}><span className="activityIcon">{icons[activity.type]}</span><div className="activityInfo"><div><small>{labels[activity.type]}</small><b className={`activityStatus ${activity.status}`}>{statusLabel(activity)}</b></div><h3>{activity.title}</h3><p>{activity.subtitle}</p><footer><span>{date.toLocaleDateString("pt-BR")} às {date.toLocaleTimeString("pt-BR",{hour:"2-digit",minute:"2-digit"})}</span><span>{activity.participants} participantes</span><span>{activity.interactions} {activity.type==="raffle"?"rodadas":activity.type==="quiz"?"respostas":"votos"}</span></footer></div><a href={activity.url}>Abrir painel →</a></article>})}</div>}</section>;
 }
 
 export function RequireActiveSubscription({ children }: { children: React.ReactNode }) {
