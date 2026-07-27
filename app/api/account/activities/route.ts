@@ -35,7 +35,7 @@ export async function GET(request: Request) {
   ]);
   const normalizeDate = (value: string | number) => typeof value === "number" ? new Date(value).toISOString() : String(value).includes("T") ? String(value) : `${String(value).replace(" ", "T")}Z`;
   const activities = [
-    ...quizResult.results.map(item => { const questions=roomQuestions(item.questions_json); return ({ ...item, questions_json: undefined, type: "quiz", questionPreview: questions.slice(0,3).map(question=>question.text), questionCount: questions.length, createdAt: normalizeDate(item.created_at), url: `/?modo=quiz&gerenciar=${encodeURIComponent(item.id)}` }); }),
+    ...quizResult.results.map(item => { const questions=roomQuestions(item.questions_json); return ({ ...item, questions_json: undefined, type: "quiz", questionPreview: questions.slice(0,3).map(question=>question.text), questionCount: questions.length, createdAt: normalizeDate(item.created_at), url: `/?modo=quiz&gerenciar=${encodeURIComponent(item.id)}`, editUrl: `/?modo=quiz&editar=${encodeURIComponent(item.id)}` }); }),
     ...campaignResult.results.map(item => ({ ...item, type: "vote", createdAt: normalizeDate(item.created_at), url: `/?p=${encodeURIComponent(item.id)}` })),
     ...raffleResult.results.map(item => ({ ...item, type: "raffle", createdAt: normalizeDate(item.created_at), url: `/?r=${encodeURIComponent(item.id)}` })),
   ].sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt));

@@ -81,9 +81,10 @@ export function GiroQuizApp() {
   const bgMusic = useRef<HTMLAudioElement | null>(null);
 
   useEffect(() => {
-    const params = new URLSearchParams(location.search), sala = params.get("sala"), gerenciar = params.get("gerenciar");
+    const params = new URLSearchParams(location.search), sala = params.get("sala"), gerenciar = params.get("gerenciar"), editar = params.get("editar");
     if (sala && /^\d{6}$/.test(sala)) { setCode(sala); setScreen("join"); }
     else if (gerenciar && /^\d{6}$/.test(gerenciar)) fetch(`/api/rooms/${gerenciar}/resume`, { cache: "no-store" }).then(async response => { const data = await response.json(); if (!response.ok) throw new Error(data.error); setCode(gerenciar); setHostKey(data.hostKey); setScreen("host"); }).catch(error => setError(error instanceof Error ? error.message : "Não foi possível abrir esta partida."));
+    else if (editar && /^\d{6}$/.test(editar)) fetch(`/api/rooms/${editar}/edit`, { cache: "no-store" }).then(async response => { const data = await response.json(); if (!response.ok) throw new Error(data.error); setQuizTitle(data.title);setQuizSubject(data.subject);setCustomQuestions(data.questions);setMusicTrackLocal(data.musicTrack||defaultMusicTrack);setMusicScopeLocal(data.musicScope||"all");setEditingSavedQuizId(null);setStudyNiche("");setCategoryTopic("");setScreen("setup");void loadSavedQuizzes();requestAnimationFrame(()=>setTimeout(()=>document.getElementById("quiz-editor")?.scrollIntoView({behavior:"smooth",block:"start"}),80)); }).catch(error => setError(error instanceof Error ? error.message : "Não foi possível editar este jogo."));
   }, []);
 
   const joinUrl = code ? `${location.origin}${location.pathname}?modo=quiz&sala=${code}` : "";
