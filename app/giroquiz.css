@@ -291,3 +291,8 @@
 .gq .manualPrompt textarea:focus,.gq .manualExplanation textarea:focus,.gq .manualOptions label:focus-within{border-color:#a886f3;box-shadow:0 0 0 3px #7655dd38;outline:0}
 .gq .savedQuizDelete{background:#302341;color:#ffbdc5}.gq .savedQuizDelete:hover{background:#552437;color:#fff}
 .gq .giroWord{color:#f4f0ff}.gq .giroWord strong{color:#bda5ff}
+.gq .quizControls{background:#1a112d;border:1px solid #4b386d;color:#f3efff;box-shadow:0 12px 30px #0003}
+.gq .quizControls label,.gq .quizControls legend{color:#d9cdff}.gq .quizControls>label>small{color:#b8accd}
+.gq .quizControls button{background:#24183d;border-color:#5b4381;color:#ded3ff}.gq .quizControls button:hover{background:#30204f;border-color:#9272e5}.gq .quizControls button.active{background:#9270ef;border-color:#c3afff;color:#120b24;box-shadow:0 6px 16px #0004}
+.gq .selectedQuiz{background:#24183d;border-color:#7655a8;color:#f3efff}.gq .selectedQuiz>div b{color:#fff}.gq .selectedQuiz span{color:#b8accd}.gq .selectedQuiz button{background:#342151;border:1px solid #7655a8;color:#d8c9ff}.gq .selectedQuiz button:hover{background:#422968;border-color:#a886f3;color:#fff}
+.gq .questionPreview>b{color:#fff}.gq .questionPreview em{color:#b8accd}.gq .starterNotice{background:#211638;border:1px solid #42315f;color:#c9bde0}
