@@ -19,6 +19,7 @@ type GameState = {
   question: Question | null; players: Player[]; answered?: boolean;
   correctOption?: number; explanation?: string; remainingMs?: number; phase?: "intro" | "answering";
   playerOption?: number; playerCorrect?: boolean; musicTrack?: string; musicScope?: MusicScope;
+  version?: number; serverNow?: number; phaseEndsAt?: number;
 };
 
 const letters = ["A", "B", "C", "D"];
@@ -79,6 +80,12 @@ export function GiroQuizApp() {
   const lastQuestion = useRef<number | null>(null);
   const feedbackTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const bgMusic = useRef<HTMLAudioElement | null>(null);
+  const stateVersion = useRef(-1);
+  const clockOffset = useRef(0);
+  const socketConnected = useRef(false);
+  const liveSession = useRef("");
+  const fetchSequence = useRef(0);
+  const appliedFetchSequence = useRef(0);
 
   useEffect(() => {
     const params = new URLSearchParams(location.search), sala = params.get("sala"), gerenciar = params.get("gerenciar"), editar = params.get("editar");
@@ -98,25 +105,41 @@ export function GiroQuizApp() {
 
   const fetchState = useCallback(async () => {
     if (!code || (screen !== "host" && screen !== "player")) return;
+    const sequence=++fetchSequence.current;
     const params = screen === "host" ? `hostKey=${encodeURIComponent(hostKey)}` : `playerId=${playerId}&playerKey=${encodeURIComponent(playerKey)}`;
     try {
       const res = await fetch(`/api/rooms/${code}?${params}`, { cache: "no-store" });
       if (!res.ok) return;
       const next = await res.json() as GameState;
+      if(socketConnected.current||sequence<appliedFetchSequence.current)return;
+      appliedFetchSequence.current=sequence;
+      if (next.serverNow) clockOffset.current = next.serverNow - Date.now();
       setState(next);
-      if (next.status !== "question" || !next.answered) setSelected(next.answered ? selected : null);
+      if (next.status !== "question" || !next.answered) setSelected(current=>next.answered?current:null);
     } catch { /* polling retries automatically */ }
-  }, [code, hostKey, playerId, playerKey, screen, selected]);
+  }, [code, hostKey, playerId, playerKey, screen]);
 
   useEffect(() => {
     if (screen !== "host" && screen !== "player") return;
-    fetchState();
-    const poll = setInterval(fetchState, 1000);
+    const session=`${screen}:${code}:${screen==="host"?hostKey:`${playerId}:${playerKey}`}`;
+    if(liveSession.current!==session){liveSession.current=session;stateVersion.current=-1;fetchSequence.current=0;appliedFetchSequence.current=0}
+    let socket:WebSocket|null=null,retry:ReturnType<typeof setTimeout>|null=null,stopped=false,attempts=0;
+    const connect=()=>{
+      if(stopped||!code)return;
+      const params=screen==="host"?`hostKey=${encodeURIComponent(hostKey)}`:`playerId=${playerId}&playerKey=${encodeURIComponent(playerKey)}`;
+      socket=new WebSocket(`${location.protocol==="https:"?"wss:":"ws:"}//${location.host}/api/rooms/${code}/live?${params}`);
+      socket.onopen=()=>{socketConnected.current=true;attempts=0;socket?.send("state")};
+      socket.onmessage=event=>{try{const next=JSON.parse(event.data) as GameState;if(next.version!==undefined&&next.version<stateVersion.current)return;stateVersion.current=next.version??stateVersion.current;if(next.serverNow)clockOffset.current=next.serverNow-Date.now();setState(next)}catch{/* evento inválido */}};
+      socket.onclose=()=>{socketConnected.current=false;if(!stopped)retry=setTimeout(connect,Math.min(1000*2**attempts++,10_000))};
+      socket.onerror=()=>socket?.close();
+    };
+    fetchState();connect();
+    const poll = setInterval(()=>{if(!socketConnected.current)void fetchState()},5000);
     const clock = setInterval(() => setNow(Date.now()), 250);
-    return () => { clearInterval(poll); clearInterval(clock); };
-  }, [fetchState, screen]);
+    return () => {stopped=true;socketConnected.current=false;if(retry)clearTimeout(retry);socket?.close();clearInterval(poll);clearInterval(clock)};
+  }, [fetchState, screen, code, hostKey, playerId, playerKey]);
 
-  const remaining = Math.max(0, Math.ceil((state?.remainingMs ?? 0) / 1000));
+  const remaining = Math.max(0, Math.ceil(state?.phaseEndsAt ? (state.phaseEndsAt-(now+clockOffset.current))/1000 : (state?.remainingMs ?? 0)/1000));
   useEffect(() => {
     if (state?.status !== "question") { lastSecond.current=null; return; }
     if (lastPhase.current !== state.phase) { if(state.phase==="answering") playPhaseStart(); lastPhase.current=state.phase ?? null; lastSecond.current=null; }

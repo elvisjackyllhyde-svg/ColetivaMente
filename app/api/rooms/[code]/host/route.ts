@@ -5,6 +5,7 @@ import { getDb } from "../../../../../db";
 import { getCurrentUser } from "../../../../../db/auth";
 import { csrfError, verifyCsrf } from "../../../../../db/csrf";
 import { writeAuditEvent } from "../../../../../lib/audit";
+import { notifyQuizRoom } from "../../../../../lib/quiz-live";
 
 export async function POST(req: Request, { params }: { params: Promise<{ code: string }> }) {
   const { code } = await params;
@@ -29,5 +30,6 @@ export async function POST(req: Request, { params }: { params: Promise<{ code: s
     if (musicScope !== undefined && ["all", "host", "off"].includes(musicScope)) await d1.prepare("UPDATE quiz_configs SET music_scope=? WHERE room_id=?").bind(musicScope, room.id).run();
   } else return Response.json({ error: "Ação não disponível" }, { status: 409 });
   await writeAuditEvent({ request: req, category: "admin", action: `quiz_${action || "unknown"}`, actorUserId: user.id, resourceType: "quiz_room", resourceId: code });
+  await notifyQuizRoom(code, `host-${action || "unknown"}`);
   return Response.json({ ok: true });
 }

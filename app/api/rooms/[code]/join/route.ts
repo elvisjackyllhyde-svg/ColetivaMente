@@ -1,4 +1,5 @@
 import { db } from "../../../../../lib/raw-db";
+import { notifyQuizRoom } from "../../../../../lib/quiz-live";
 
 export async function POST(req: Request, { params }: { params: Promise<{ code: string }> }) {
   const { code } = await params;
@@ -18,6 +19,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ code: s
   const key = crypto.randomUUID();
   try {
     const result = await d1.prepare("INSERT INTO players (room_id,player_key,name,email,score,joined_at,consented_at) VALUES (?,?,?,?,?,?,?)").bind(room.id, key, name, email, 0, Date.now(), new Date().toISOString()).run();
+    await notifyQuizRoom(code, "player-joined");
     return Response.json({ playerId: result.meta.last_row_id, playerKey: key }, { status: 201 });
   } catch {
     return Response.json({ error: "Este nome já está na sala." }, { status: 409 });
