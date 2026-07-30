@@ -19,6 +19,7 @@ type GameState = {
   question: Question | null; players: Player[]; answered?: boolean;
   correctOption?: number; explanation?: string; remainingMs?: number; phase?: "intro" | "answering";
   playerOption?: number; playerCorrect?: boolean; musicTrack?: string; musicScope?: MusicScope;
+  version?: number; serverNow?: number; phaseEndsAt?: number;
 };
 
 const letters = ["A", "B", "C", "D"];
@@ -79,6 +80,13 @@ export function GiroQuizApp() {
   const lastQuestion = useRef<number | null>(null);
   const feedbackTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const bgMusic = useRef<HTMLAudioElement | null>(null);
+  const stateVersion = useRef(-1);
+  const clockOffset = useRef(0);
+  const socketConnected = useRef(false);
+  const liveSession = useRef("");
+  const fetchSequence = useRef(0);
+  const appliedFetchSequence = useRef(0);
+  const hostActionPending = useRef(false);
 
   useEffect(() => {
     const params = new URLSearchParams(location.search), sala = params.get("sala"), gerenciar = params.get("gerenciar"), editar = params.get("editar");
@@ -98,25 +106,49 @@ export function GiroQuizApp() {
 
   const fetchState = useCallback(async () => {
     if (!code || (screen !== "host" && screen !== "player")) return;
-    const params = screen === "host" ? `hostKey=${encodeURIComponent(hostKey)}` : `playerId=${playerId}&playerKey=${encodeURIComponent(playerKey)}`;
+    const sequence=++fetchSequence.current;
+    const headers = screen === "host" ? { "x-quiz-host-key": hostKey } : { "x-quiz-player-id": String(playerId), "x-quiz-player-key": playerKey };
     try {
-      const res = await fetch(`/api/rooms/${code}?${params}`, { cache: "no-store" });
+      const res = await fetch(`/api/rooms/${code}`, { cache: "no-store", headers });
       if (!res.ok) return;
       const next = await res.json() as GameState;
+      if(socketConnected.current||sequence<appliedFetchSequence.current)return;
+      appliedFetchSequence.current=sequence;
+      if (next.serverNow) clockOffset.current = next.serverNow - Date.now();
       setState(next);
-      if (next.status !== "question" || !next.answered) setSelected(next.answered ? selected : null);
+      if (next.status !== "question" || !next.answered) setSelected(current=>next.answered?current:null);
     } catch { /* polling retries automatically */ }
-  }, [code, hostKey, playerId, playerKey, screen, selected]);
+  }, [code, hostKey, playerId, playerKey, screen]);
 
   useEffect(() => {
     if (screen !== "host" && screen !== "player") return;
-    fetchState();
-    const poll = setInterval(fetchState, 1000);
+    const session=`${screen}:${code}:${screen==="host"?hostKey:`${playerId}:${playerKey}`}`;
+    if(liveSession.current!==session){liveSession.current=session;stateVersion.current=-1;fetchSequence.current=0;appliedFetchSequence.current=0}
+    let socket:WebSocket|null=null,retry:ReturnType<typeof setTimeout>|null=null,stopped=false,attempts=0;
+    const connect=async()=>{
+      if(stopped||!code)return;
+      try {
+        const ticketResponse=await csrfFetch(`/api/rooms/${code}/live-ticket`,{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify(screen==="host"?{hostKey}:{playerId,playerKey})});
+        const ticketData=await ticketResponse.json() as {ticket?:string};
+        if(!ticketResponse.ok||!ticketData.ticket)throw new Error("Ingresso de conexão indisponível");
+        if(stopped)return;
+        socket=new WebSocket(`${location.protocol==="https:"?"wss:":"ws:"}//${location.host}/api/rooms/${code}/live?ticket=${encodeURIComponent(ticketData.ticket)}`);
+      socket.onopen=()=>{socketConnected.current=true;attempts=0;socket?.send("state")};
+      socket.onmessage=event=>{try{const next=JSON.parse(event.data) as GameState;if(next.version!==undefined&&next.version<stateVersion.current)return;stateVersion.current=next.version??stateVersion.current;if(next.serverNow)clockOffset.current=next.serverNow-Date.now();setState(next)}catch{/* evento inválido */}};
+        socket.onclose=()=>{socketConnected.current=false;if(!stopped)retry=setTimeout(()=>void connect(),Math.min(1000*2**attempts++,10_000))};
+        socket.onerror=()=>socket?.close();
+      } catch {
+        socketConnected.current=false;
+        if(!stopped)retry=setTimeout(()=>void connect(),Math.min(1000*2**attempts++,10_000));
+      }
+    };
+    fetchState();void connect();
+    const poll = setInterval(()=>{if(!socketConnected.current)void fetchState()},5000);
     const clock = setInterval(() => setNow(Date.now()), 250);
-    return () => { clearInterval(poll); clearInterval(clock); };
-  }, [fetchState, screen]);
+    return () => {stopped=true;socketConnected.current=false;if(retry)clearTimeout(retry);socket?.close();clearInterval(poll);clearInterval(clock)};
+  }, [fetchState, screen, code, hostKey, playerId, playerKey]);
 
-  const remaining = Math.max(0, Math.ceil((state?.remainingMs ?? 0) / 1000));
+  const remaining = Math.max(0, Math.ceil(state?.phaseEndsAt ? (state.phaseEndsAt-(now+clockOffset.current))/1000 : (state?.remainingMs ?? 0)/1000));
   useEffect(() => {
     if (state?.status !== "question") { lastSecond.current=null; return; }
     if (lastPhase.current !== state.phase) { if(state.phase==="answering") playPhaseStart(); lastPhase.current=state.phase ?? null; lastSecond.current=null; }
@@ -180,14 +212,25 @@ export function GiroQuizApp() {
   };
 
   const hostAction = async (action: "start" | "reveal" | "next" | "restart" | "cancel" | "music", extra?: { musicTrack?: string; musicScope?: MusicScope }) => {
-    setLoading(true);
-    await fetch(`/api/rooms/${code}/host`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ hostKey, action, ...extra }) });
-    await fetchState(); setLoading(false);
+    if (hostActionPending.current) return false;
+    hostActionPending.current = true;
+    const expectedStatus = state?.status, expectedQuestionIndex = state?.questionIndex;
+    setLoading(true); setError("");
+    try {
+      const response = await fetch(`/api/rooms/${code}/host`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ hostKey, action, expectedStatus, expectedQuestionIndex, ...extra }) });
+      const data = await response.json() as { error?: string; stateChanged?: boolean };
+      await fetchState();
+      if (!response.ok) throw new Error(data.stateChanged ? "A partida já havia mudado. A tela foi sincronizada; confira o estado antes de continuar." : data.error || "Não foi possível executar esta ação.");
+      return true;
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : "Não foi possível executar esta ação.");
+      return false;
+    } finally { hostActionPending.current = false; setLoading(false); }
   };
   const setLiveTrack = (id: string) => hostAction("music", { musicTrack: id });
   const setLiveScope = (scope: MusicScope) => hostAction("music", { musicScope: scope });
   const restartGame=async()=>{if(!confirm("Reiniciar a partida? As pontuações serão zeradas e todos voltarão para a sala de espera."))return;await hostAction("restart");};
-  const leaveGame=async()=>{if(!confirm("Encerrar esta partida e voltar à página inicial?"))return;await hostAction("cancel");setState(null);setCode("");setHostKey("");setScreen("home");};
+  const leaveGame=async()=>{if(!confirm("Encerrar esta partida e voltar à página inicial?"))return;if(await hostAction("cancel")){setState(null);setCode("");setHostKey("");setScreen("home");}};
 
   const answer = async (option: number) => {
     if (selected !== null || state?.answered) return;

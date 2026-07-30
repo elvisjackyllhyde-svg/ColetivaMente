@@ -36,7 +36,7 @@ export async function csrfFetch(input: RequestInfo | URL, init: RequestInit = {}
 function isProtected(pathname: string, method: string) {
   if (method === "POST" && ["/api/auth/logout", "/api/billing/checkout", "/api/billing/status", "/api/campaigns", "/api/raffles", "/api/rooms"].includes(pathname)) return true;
   if (method === "PATCH" && (pathname === "/api/admin/users" || /^\/api\/(campaigns|raffles)\/[^/]+$/.test(pathname))) return true;
-  if (method === "POST" && (/^\/api\/(campaigns|raffles)\/[^/]+\/claim$/.test(pathname) || /^\/api\/raffles\/[^/]+\/manual$/.test(pathname) || /^\/api\/rooms\/[^/]+\/host$/.test(pathname))) return true;
+  if (method === "POST" && (/^\/api\/(campaigns|raffles)\/[^/]+\/claim$/.test(pathname) || /^\/api\/raffles\/[^/]+\/manual$/.test(pathname) || /^\/api\/rooms\/[^/]+\/(host|live-ticket)$/.test(pathname))) return true;
   return method === "DELETE" && pathname === "/api/quiz-library";
 }
 

@@ -1,10 +1,12 @@
 /** Cloudflare Worker entry point for the vinext-starter template. */
 import { handleImageOptimization, DEFAULT_DEVICE_SIZES, DEFAULT_IMAGE_SIZES } from "vinext/server/image-optimization";
 import handler from "vinext/server/app-router-entry";
+export { QuizRoom } from "./quiz-room";
 
 interface Env {
   ASSETS: Fetcher;
   DB: D1Database;
+  QUIZ_ROOMS: DurableObjectNamespace;
   IMAGES: {
     input(stream: ReadableStream): {
       transform(options: Record<string, unknown>): {
@@ -28,6 +30,18 @@ interface ExecutionContext {
 const worker = {
   async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
     const url = new URL(request.url);
+
+    const liveMatch = url.pathname.match(/^\/api\/rooms\/(\d{6})\/live$/);
+    if (liveMatch && request.headers.get("Upgrade") === "websocket") {
+      const code = liveMatch[1];
+      const ticket = url.searchParams.get("ticket");
+      if (!ticket) return new Response("Ingresso obrigatório", { status: 401 });
+      const id = env.QUIZ_ROOMS.idFromName(code);
+      const headers = new Headers(request.headers);
+      headers.set("x-quiz-code", code);
+      headers.set("x-quiz-ticket", ticket);
+      return env.QUIZ_ROOMS.get(id).fetch(new Request("https://quiz-room.internal/connect", { headers }));
+    }
 
     if (url.pathname === "/_vinext/image") {
       const allowedWidths = [...DEFAULT_DEVICE_SIZES, ...DEFAULT_IMAGE_SIZES];
