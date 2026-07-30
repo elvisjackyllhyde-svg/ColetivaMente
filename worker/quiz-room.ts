@@ -7,6 +7,7 @@ const TOTAL_MS = INTRO_MS + ANSWER_MS;
 
 type Env = { DB: D1Database };
 type SocketIdentity = { role: "host" | "player"; playerId?: number };
+type LiveTicket = SocketIdentity & { expiresAt: number };
 type RoomRow = Record<string, number | string | null>;
 type PlayerRow = { id: number; name: string; score: number };
 type AnswerRow = { player_id: number; option: number; correct: number };
@@ -31,12 +32,29 @@ export class QuizRoom extends DurableObject<Env> {
       await this.broadcast();
       return Response.json({ ok: true });
     }
+    if (url.pathname === "/ticket" && request.method === "POST") {
+      const body = await request.json().catch(() => ({})) as { code?: string; role?: string; playerId?: number };
+      if (!body.code || (body.role !== "host" && body.role !== "player") || (body.role === "player" && !body.playerId)) {
+        return Response.json({ error: "Identidade inválida" }, { status: 400 });
+      }
+      await this.setCode(body.code);
+      await this.cleanExpiredTickets();
+      const ticket = crypto.randomUUID();
+      await this.ctx.storage.put(`ticket:${ticket}`, { role: body.role, playerId: body.playerId, expiresAt: Date.now() + 30_000 } satisfies LiveTicket);
+      return Response.json({ ticket, expiresIn: 30 });
+    }
     if (url.pathname !== "/connect" || request.headers.get("Upgrade") !== "websocket") {
       return new Response("Not found", { status: 404 });
     }
     const code = request.headers.get("x-quiz-code") || "";
-    const role = request.headers.get("x-quiz-role") === "host" ? "host" : "player";
-    const playerId = Number(request.headers.get("x-quiz-player-id") || 0) || undefined;
+    const ticket = request.headers.get("x-quiz-ticket") || "";
+    const stored = ticket ? await this.ctx.storage.get<LiveTicket>(`ticket:${ticket}`) : undefined;
+    if (!stored || stored.expiresAt < Date.now()) {
+      if (ticket) await this.ctx.storage.delete(`ticket:${ticket}`);
+      return new Response("Ingresso inválido ou expirado", { status: 403 });
+    }
+    await this.ctx.storage.delete(`ticket:${ticket}`);
+    const { role, playerId } = stored;
     await this.setCode(code);
     const pair = new WebSocketPair();
     const client = pair[0], server = pair[1];
@@ -71,6 +89,13 @@ export class QuizRoom extends DurableObject<Env> {
     if (!code || code === this.code) return;
     this.code = code;
     await this.ctx.storage.put("code", code);
+  }
+
+  private async cleanExpiredTickets() {
+    const tickets = await this.ctx.storage.list<LiveTicket>({ prefix: "ticket:" });
+    const now = Date.now();
+    const expired = [...tickets.entries()].filter(([, value]) => value.expiresAt < now).map(([key]) => key);
+    if (expired.length) await this.ctx.storage.delete(expired);
   }
 
   private loadRoom() {

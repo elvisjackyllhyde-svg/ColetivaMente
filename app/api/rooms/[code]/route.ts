@@ -7,11 +7,11 @@ const INTRO_MS = 10_000, ANSWER_MS = 15_000, TOTAL_MS = INTRO_MS + ANSWER_MS;
 
 export async function GET(req: Request, { params }: { params: Promise<{ code: string }> }) {
   const { code } = await params;
-  const url = new URL(req.url), d1 = db();
+  const d1 = db();
   const room = await d1.prepare("SELECT r.*,q.title,q.subject,q.questions_json,q.music_track,q.music_scope FROM rooms r LEFT JOIN quiz_configs q ON q.room_id=r.id WHERE r.code=?").bind(code).first<Record<string, number | string | null>>();
   if (!room) return Response.json({ error: "Sala não encontrada" }, { status: 404 });
-  const hostKeyMatches = url.searchParams.get("hostKey") === room.host_key;
-  const pid = Number(url.searchParams.get("playerId")), pkey = url.searchParams.get("playerKey");
+  const hostKeyMatches = req.headers.get("x-quiz-host-key") === room.host_key;
+  const pid = Number(req.headers.get("x-quiz-player-id")), pkey = req.headers.get("x-quiz-player-key");
   let host = false;
   if (hostKeyMatches) {
     const user = await getCurrentUser(req, getDb());
