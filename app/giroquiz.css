@@ -156,7 +156,7 @@
 .gq .soundPanel small{display:block;color:var(--muted);margin-top:9px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .gq .revealWaitIcon{width:88px;height:88px;border-radius:50%;margin:auto;display:grid;place-items:center;background:#e8f3c2;color:var(--green);font-size:28px;font-weight:900;letter-spacing:.12em;animation:gqTimerBreath 1s ease-in-out infinite}
 .gq .stageButton{display:block;margin:25px auto 0;background:var(--ink);color:white}
-.gq .revealBar{margin-top:24px;background:white;border-radius:18px;padding:16px 20px;display:flex;gap:20px;align-items:center;justify-content:space-between}
+.gq .revealBar{margin-top:24px;background:white;color:#21143f;border-radius:18px;padding:16px 20px;display:flex;gap:20px;align-items:center;justify-content:space-between}
 .gq .revealBar p{margin:0;line-height:1.4}
 .gq .locked{text-align:center;background:var(--ink);color:white;border-radius:13px;padding:13px;margin-top:20px;font-weight:800}
 .gq .waiting{min-height:calc(100vh - 76px)}
@@ -177,7 +177,7 @@
 .gq .resultCard>p{color:var(--muted);font-size:18px;line-height:1.5}
 .gq .myScore{font-size:55px;font-weight:900;color:var(--green);margin:20px}
 .gq .myScore small{font-size:17px}
-.gq .miniRanking{background:white;border-radius:20px;padding:10px;box-shadow:0 12px 35px #153c2d14}
+.gq .miniRanking{background:white;color:#21143f;border-radius:20px;padding:10px;box-shadow:0 12px 35px #153c2d14}
 .gq .miniRanking div{display:grid;grid-template-columns:35px 1fr auto;gap:10px;padding:12px 15px;border-radius:12px;text-align:left}
 .gq .miniRanking div.me{background:#eef8d0}
 .gq .miniRanking strong{color:var(--green)}
