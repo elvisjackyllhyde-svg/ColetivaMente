@@ -1,6 +1,12 @@
-# Giro Experiências
+# ColetivaMente
 
-Portal que reúne o GiroQuiz Ao Vivo e o Voto em Valor. Este repositório contém o portal e a aplicação completa do Voto em Valor, com votação por categorias, cadastro de participantes, resultados ao vivo e segunda rodada de opiniões.
+SaaS de engajamento corporativo com três dinâmicas ao vivo, todas integradas neste mesmo app:
+
+- **GiroQuiz** — quiz ao vivo com ranking em tempo real, importação de perguntas por PDF e trilha sonora.
+- **Voto em Valor** — pesquisa/votação por categorias com dashboard de resultados e segunda rodada de opiniões.
+- **Sorteio** — sorteio de prêmios com inscrição pelo celular (gratuito, não exige conta).
+
+GiroQuiz e Voto em Valor exigem assinatura (R$120 = 30 dias de acesso, via Mercado Pago). O Sorteio é gratuito e serve como porta de entrada para os outros dois.
 
 ## Requisitos
 
@@ -44,14 +50,15 @@ As tabelas e migrações estão em `db/` e `drizzle/`. A configuração do bindi
 
 ## Estrutura principal
 
-- `app/`: páginas, estilos e rotas da API
-- `db/`: conexão e esquema do banco
+- `app/`: páginas, estilos e rotas da API dos três produtos, autenticação, billing e painel admin
+- `db/`: conexão, esquema e helpers de autenticação/CSRF
 - `drizzle/`: migrações SQL
-- `public/`: logos e assets públicos
-- `worker/`: entrada do Cloudflare Worker
-- `build/`: integração do build com Sites
+- `lib/`: integrações (Mercado Pago, e-mail, quiz em tempo real, rate limiting, audit log)
+- `public/`: logos, músicas e assets públicos
+- `worker/`: entrada do Cloudflare Worker, incluindo o Durable Object do GiroQuiz em tempo real
+- `build/`: integração do build com Cloudflare Sites
 - `tests/`: testes automatizados
 
-## Observação sobre o GiroQuiz
+## Deploy
 
-O cartão GiroQuiz do portal aponta para a aplicação pública `https://giroquiz-ao-vivo.elvispieta.chatgpt.site`. O código-fonte incluído neste pacote corresponde ao portal Giro Experiências e ao Voto em Valor.
+O worker (`coletivamente`) roda no Cloudflare Workers, com domínio customizado `coletivamente.app`. O deploy é feito pela integração Git do Cloudflare: um push para `main` no GitHub dispara o build e a publicação automaticamente.
