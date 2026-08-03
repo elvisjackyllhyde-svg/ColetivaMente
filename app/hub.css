@@ -45,3 +45,8 @@ html,body{max-width:100%;overflow-x:clip}
 .hubBrand:after{display:none!important}
 @media(max-width:760px){.hubNav{padding-left:0;min-height:70px}.hubNav:before{width:250px}.hubBrand{width:min(230px,64vw);height:70px}.hubBrand:before{inset:11px 0 11px 0}}
 @media(prefers-reduced-motion:reduce){.hubBrand:before{animation:none}}
+
+
+/* Limpeza do fundo: corta e mascara o vestigio da logo antiga na lateral esquerda. */
+@media(min-width:1200px){.hub{background:linear-gradient(to bottom,transparent 0%,transparent 58%,#050409cc 100%),url('/hub-bg.jpg') 54% top/112% auto no-repeat,#06050a}.hub:before{content:"";position:absolute;z-index:0;inset:0 auto 0 calc(-1 * clamp(20px,4vw,64px));width:clamp(190px,15vw,310px);background:linear-gradient(90deg,#05040b 0 42%,rgba(5,4,11,.94) 60%,rgba(5,4,11,.45) 78%,rgba(5,4,11,0) 100%);pointer-events:none}}
+@media(max-width:1199px){.hub:before{display:none}}
