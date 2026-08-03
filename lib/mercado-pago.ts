@@ -5,7 +5,7 @@ import { payments } from "../db/schema";
 
 type MercadoPagoEnv={DB:D1Database;MP_ACCESS_TOKEN?:string;MP_WEBHOOK_SECRET?:string};
 type MercadoPagoPayment={id:number|string;status:string;external_reference?:string;transaction_amount?:number;currency_id?:string;date_approved?:string;live_mode?:boolean};
-export const PLAN_AMOUNT_CENTS=12_000;
+export const PLAN_AMOUNT_CENTS=2_500;
 export const PLAN_ACCESS_DAYS=30;
 export const PRODUCTION_ORIGIN="https://coletivamente.app";
 export const mpSecrets=()=>env as unknown as MercadoPagoEnv;
