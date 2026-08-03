@@ -35,3 +35,13 @@ html,body{max-width:100%;overflow-x:clip}
 .pricingNudge{flex:0 0 auto;width:max-content;max-width:calc(100% - 24px);margin:18px auto 0;display:grid;grid-template-columns:auto auto;align-items:center;gap:3px 13px;padding:11px 18px 11px 20px;border:1px solid #9b8cff66;border-radius:999px;background:#121124e8;box-shadow:0 12px 34px #0008;color:var(--ink);text-decoration:none;backdrop-filter:blur(12px);transition:transform .2s,border-color .2s}.pricingNudge:hover,.pricingNudge:focus-visible{transform:translateY(3px);border-color:var(--indigo);outline:none}.pricingNudge span{grid-column:1;color:var(--muted);font-size:10px;font-weight:700;letter-spacing:.04em}.pricingNudge b{grid-column:1;font-size:13px}.pricingNudge i{grid-column:2;grid-row:1/3;display:grid;place-items:center;width:34px;height:34px;border-radius:50%;background:var(--indigo);color:#100c20;font-style:normal;font-size:18px;animation:pricingBounce 1.6s ease-in-out infinite}@keyframes pricingBounce{0%,100%{transform:translateY(-2px)}50%{transform:translateY(3px)}}
 @media(max-width:760px){.hubNav{padding-left:6px}.hubNav:before{width:290px}.hubBrand{width:min(270px,72vw)}.pricingNudge{margin-top:22px}}
 @media(prefers-reduced-motion:reduce){.pricingNudge i{animation:none}}
+
+
+/* Polimento da marca no topo: integra a logo ao fundo sem a placa preta da imagem original. */
+.hubNav{padding-left:0;min-height:76px}
+.hubNav:before{left:calc(-1 * clamp(20px,4vw,64px));width:min(42vw,520px);background:linear-gradient(90deg,rgba(6,5,14,.48),rgba(6,5,14,.16) 46%,transparent 86%)}
+.hubBrand{width:clamp(220px,20vw,320px);height:76px;background:none!important;overflow:visible;isolation:auto}
+.hubBrand:before{content:"";display:block!important;position:absolute;inset:10px 0 10px 0;background:url("/logo-coletivamente.png") left center/contain no-repeat;mix-blend-mode:screen;filter:drop-shadow(0 0 12px rgba(235,188,84,.18));opacity:.96;pointer-events:none;animation:none;transform:none}
+.hubBrand:after{display:none!important}
+@media(max-width:760px){.hubNav{padding-left:0;min-height:70px}.hubNav:before{width:250px}.hubBrand{width:min(230px,64vw);height:70px}.hubBrand:before{inset:11px 0 11px 0}}
+@media(prefers-reduced-motion:reduce){.hubBrand:before{animation:none}}
