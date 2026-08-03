@@ -155,7 +155,7 @@
 .gq .soundChoices input{display:none}
 .gq .soundPanel small{display:block;color:var(--muted);margin-top:9px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .gq .revealWaitIcon{width:88px;height:88px;border-radius:50%;margin:auto;display:grid;place-items:center;background:#e8f3c2;color:var(--green);font-size:28px;font-weight:900;letter-spacing:.12em;animation:gqTimerBreath 1s ease-in-out infinite}
-.gq .stageButton{display:block;margin:25px auto 0;background:var(--ink);color:white}
+.gq .stageButton{display:block;margin:25px auto 0;background:#21143f;color:white}
 .gq .revealBar{margin-top:24px;background:white;color:#21143f;border-radius:18px;padding:16px 20px;display:flex;gap:20px;align-items:center;justify-content:space-between}
 .gq .revealBar p{margin:0;line-height:1.4}
 .gq .locked{text-align:center;background:var(--ink);color:white;border-radius:13px;padding:13px;margin-top:20px;font-weight:800}
