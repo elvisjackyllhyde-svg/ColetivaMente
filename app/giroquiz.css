@@ -296,3 +296,28 @@
 .gq .quizControls button{background:#24183d;border-color:#5b4381;color:#ded3ff}.gq .quizControls button:hover{background:#30204f;border-color:#9272e5}.gq .quizControls button.active{background:#9270ef;border-color:#c3afff;color:#120b24;box-shadow:0 6px 16px #0004}
 .gq .selectedQuiz{background:#24183d;border-color:#7655a8;color:#f3efff}.gq .selectedQuiz>div b{color:#fff}.gq .selectedQuiz span{color:#b8accd}.gq .selectedQuiz button{background:#342151;border:1px solid #7655a8;color:#d8c9ff}.gq .selectedQuiz button:hover{background:#422968;border-color:#a886f3;color:#fff}
 .gq .questionPreview>b{color:#fff}.gq .questionPreview em{color:#b8accd}.gq .starterNotice{background:#211638;border:1px solid #42315f;color:#c9bde0}
+
+
+/* Mobile host: deixa o botao de avancar visivel acima dos controles fixos. */
+@media(max-width:800px){
+  .gq .hostView .questionStage{padding-bottom:190px}
+  .gq .hostView .revealBar{align-items:stretch;gap:16px;padding:18px;border-radius:22px}
+  .gq .hostView .revealBar p{font-size:17px;line-height:1.45}
+  .gq .hostView .revealBar .primary{
+    position:sticky;
+    bottom:112px;
+    z-index:25;
+    width:min(100%,360px);
+    min-height:58px;
+    margin:0 auto;
+    border-radius:18px;
+    font-size:17px;
+    box-shadow:0 10px 0 #2d1d78,0 18px 36px #120b2440;
+  }
+  .gq .hostGameMenu{padding:12px 10px 14px;border-radius:20px}
+  .gq .hostGameMenu button{min-height:46px;padding:10px 13px;border-radius:12px;font-size:13px}
+}
+@media(max-width:420px){
+  .gq .hostView .questionStage{padding-bottom:205px}
+  .gq .hostView .revealBar .primary{bottom:124px;width:100%;font-size:16px}
+}
