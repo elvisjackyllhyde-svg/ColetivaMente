@@ -1,10 +1,10 @@
-"use client";
+import { hasCreationAccess, useAuth } from "./auth";"use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import "./giroquiz.css";
 import { categoryCatalog, makeStudyQuiz, nicheInfo, type Difficulty, type StudyNiche, type StudyQuestion } from "../lib/study-banks";
 import { categoryNames, makeCategoryQuiz, type CategoryTopic } from "../lib/category-banks";
-import { remainingAccessDays, useAuth } from "./auth";
+if (!hasCreationAccess(user)) { location.href = "/?modo=conta"; return; }
 import QRCode from "qrcode";
 import { defaultMusicTrack, musicTrackFile, musicTracks, type MusicScope } from "../lib/music-tracks";
 import { csrfFetch } from "./csrf-client";
