@@ -192,7 +192,7 @@ export function AccountPage() {
     {active && !user.isAdmin && !lifetime && <button className="aBtn secondary big" disabled={busy} onClick={subscribe}>{busy ? "Abrindo Mercado Pago..." : "Adicionar mais 30 dias"}</button>}
     {user.isAdmin && <a className="aBtn secondary big" href="/?modo=admin">Administrar contas</a>}
     <button className="aBtn textMuted" onClick={logout}>Sair da conta</button>
-  </section><ActivityLibrary /></div></main></>;
+  </section><div className="accountSecondary"><PaymentHistory /><ActivityLibrary /></div></div></main></>;
 }
 
 type AccountActivity={id:string;type:"quiz"|"vote"|"raffle";title:string;subtitle:string;status:string;createdAt:string;participants:number;interactions:number;url:string;editUrl?:string;questionPreview?:string[];questionCount?:number};
@@ -203,6 +203,19 @@ function ActivityLibrary(){
   const visible=filter==="all"?activities:activities.filter(activity=>activity.type===filter),labels={quiz:"GiroQuiz",vote:"Votação",raffle:"Sorteio"},icons={quiz:"?",vote:"✓",raffle:"★"};
   const statusLabel=(activity:AccountActivity)=>activity.type==="quiz"?({lobby:"Aguardando",question:"Em andamento",reveal:"Em andamento",finished:"Finalizado",cancelled:"Encerrado"}[activity.status]||activity.status):activity.status==="feedback"?"2ª rodada":activity.status==="closed"?"Encerrado":"Aberto";
   return <section className="activityLibrary"><header><div><p className="aEyebrow">SEU HISTÓRICO</p><h2>Minhas atividades</h2><p>Consulte e reabra os jogos, votações e sorteios criados por esta conta.</p></div><strong>{activities.length} registros</strong></header><nav aria-label="Filtrar atividades">{(["all","quiz","vote","raffle"] as const).map(type=><button className={filter===type?"active":""} onClick={()=>setFilter(type)} key={type}>{type==="all"?"Todos":labels[type]}</button>)}</nav>{loading?<div className="activityEmpty">Carregando suas atividades...</div>:error?<div className="aAlert">{error}</div>:visible.length===0?<div className="activityEmpty"><strong>Nenhuma atividade encontrada.</strong><span>Quando você criar uma dinâmica, ela aparecerá aqui automaticamente.</span></div>:<div className="activityList">{visible.map(activity=>{const date=new Date(activity.createdAt);return <article className={`activityItem ${activity.type}`} key={`${activity.type}-${activity.id}`}><span className="activityIcon">{icons[activity.type]}</span><div className="activityInfo"><div><small>{labels[activity.type]}</small><b className={`activityStatus ${activity.status}`}>{statusLabel(activity)}</b>{activity.type==="quiz"&&<span className="activityRoom">SALA <strong>{activity.id}</strong></span>}</div><h3>{activity.title}</h3><p>{activity.subtitle}</p>{activity.type==="quiz"&&activity.questionPreview?.length?<div className="activityQuestions"><strong>Algumas perguntas</strong><ol>{activity.questionPreview.map((question,index)=><li key={`${activity.id}-question-${index}`}>{question}</li>)}</ol>{(activity.questionCount||0)>activity.questionPreview.length&&<small>+ {(activity.questionCount||0)-activity.questionPreview.length} perguntas neste GiroQuiz</small>}</div>:null}<footer><span>{date.toLocaleDateString("pt-BR")} às {date.toLocaleTimeString("pt-BR",{hour:"2-digit",minute:"2-digit"})}</span><span>{activity.participants} participantes</span><span>{activity.interactions} {activity.type==="raffle"?"rodadas":activity.type==="quiz"?"respostas":"votos"}</span></footer></div><div className="activityActions"><a href={activity.url}>Abrir painel →</a>{activity.editUrl&&<a className="editActivity" href={activity.editUrl}>✎ Editar jogo</a>}</div></article>})}</div>}</section>;
+}
+
+type AccountPayment={amountCents:number;currency:string;status:string;createdAt:string;approvedAt:string|null};
+
+function PaymentHistory(){
+  const [rows,setRows]=useState<AccountPayment[]>([]),[loading,setLoading]=useState(true),[error,setError]=useState("");
+  useEffect(()=>{fetch("/api/account/payments",{cache:"no-store"}).then(async response=>{const data=await response.json();if(!response.ok)throw new Error(data.error);setRows(data.payments||[])}).catch(reason=>setError(reason instanceof Error?reason.message:"Não foi possível carregar seus pagamentos.")).finally(()=>setLoading(false))},[]);
+  const statusLabel:Record<string,string>={created:"Aguardando pagamento",pending:"Em análise",approved:"Aprovado",failed:"Falhou",rejected:"Recusado"};
+  const formatAmount=(cents:number,currency:string)=>new Intl.NumberFormat("pt-BR",{style:"currency",currency}).format(cents/100);
+  return <section className="aCard paymentHistory">
+    <p className="aEyebrow">PAGAMENTOS</p><h2>Meus pagamentos</h2>
+    {loading?<p className="aMuted">Carregando...</p>:error?<div className="aAlert">{error}</div>:rows.length===0?<p className="aMuted">Nenhum pagamento realizado ainda.</p>:rows.map((payment,index)=>{const date=new Date(payment.createdAt.includes("T")?payment.createdAt:`${payment.createdAt.replace(" ","T")}Z`);return <div className="aStatusRow" key={index}><span>{date.toLocaleDateString("pt-BR")}</span><b className={payment.status==="approved"?"aActive":payment.status==="failed"||payment.status==="rejected"?"aInactive":undefined}>{formatAmount(payment.amountCents,payment.currency)} · {statusLabel[payment.status]||payment.status}</b></div>;})}
+  </section>;
 }
 
 export function RequireActiveSubscription({ children }: { children: React.ReactNode }) {
