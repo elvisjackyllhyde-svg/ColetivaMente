@@ -409,3 +409,32 @@
   .gq .joinLanding .joinCard{padding-left:14px;padding-right:14px}
   .gq .joinLanding .codeInput{font-size:25px!important;letter-spacing:.13em}
 }
+
+
+/* Entrada logada: usa dados da conta sem pedir nome e e-mail novamente. */
+.gq .loggedJoinNotice{
+  display:grid;
+  grid-template-columns:auto 1fr;
+  align-items:center;
+  gap:12px;
+  margin:8px 0 4px;
+  padding:14px;
+  border:1px solid #6b50a0;
+  border-radius:16px;
+  background:#24183d;
+  color:#f4efff;
+}
+.gq .loggedJoinNotice i{
+  width:42px;
+  height:42px;
+  display:grid;
+  place-items:center;
+  border-radius:14px;
+  background:#9270ef;
+  color:#120b24;
+  font-style:normal;
+  font-weight:900;
+}
+.gq .loggedJoinNotice span{display:grid;gap:2px;min-width:0;font-size:13px;color:#cfc4e6}
+.gq .loggedJoinNotice b{color:#fff;font-size:16px}
+.gq .loggedJoinNotice small{color:#aa9ec0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
