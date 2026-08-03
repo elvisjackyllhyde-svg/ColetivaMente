@@ -185,7 +185,7 @@ export function AccountPage() {
     {!user.isAdmin && <div className="aStatusRow"><span>DISPONIBILIDADE</span><b className={active ? "aActive" : "aInactive"}>{lifetime ? "Acesso vitalício" : active ? `${days} dias restantes` : "Acesso expirado"}</b></div>}
     <div className="aStatusRow"><span>E-MAIL</span><b>{user.email}</b></div>
     {!active && <>
-      <p className="aMuted">Adquira 30 dias de acesso por R$ 120 para criar GiroQuiz, pesquisas e sorteios ilimitados para sua equipe.</p>
+      <p className="aMuted">Adquira 30 dias de acesso por R$ 120 para criar GiroQuiz e pesquisas ilimitadas para sua equipe. O Sorteio é grátis, sem conta.</p>
       <button className="aBtn primary big" disabled={busy} onClick={subscribe}>{busy ? "Abrindo Mercado Pago..." : "Pagar R$ 120 com Mercado Pago →"}</button>
     </>}
     {active && <a className="aBtn primary big" href="/">Ir para o painel →</a>}

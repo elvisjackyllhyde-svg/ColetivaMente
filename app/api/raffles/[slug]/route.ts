@@ -1,16 +1,20 @@
 import { eq, inArray } from "drizzle-orm";
 import { getDb } from "../../../../db";
 import { getCurrentUser } from "../../../../db/auth";
-import { csrfError, verifyCsrf } from "../../../../db/csrf";
+import { csrfError, verifyCsrf, verifyRequestOrigin } from "../../../../db/csrf";
 import { raffleEntries, raffles, raffleWinnerHistory } from "../../../../db/schema";
 import { writeAuditEvent } from "../../../../lib/audit";
+
+const ownsRaffleByToken = (raffle: { creatorUserId: number | null; adminToken: string }, token: string) =>
+  raffle.creatorUserId === null && Boolean(token) && token === raffle.adminToken;
 
 export async function GET(request: Request, { params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params; const db = getDb();
   const [raffle] = await db.select().from(raffles).where(eq(raffles.slug, slug)).limit(1);
   if (!raffle) return Response.json({ error: "Sorteio não encontrado." }, { status: 404 });
   const user = await getCurrentUser(request, db);
-  const isAdmin = Boolean(user && (user.isAdmin || raffle.creatorUserId === user.id));
+  const token = new URL(request.url).searchParams.get("admin") || "";
+  const isAdmin = Boolean(user && (user.isAdmin || raffle.creatorUserId === user.id)) || ownsRaffleByToken(raffle, token);
   let accountHistory: Array<{ drawId: string; name: string; position: number; drawnAt: string; raffleTitle: string; raffleSlug: string }> = [];
   if (isAdmin) {
     if (user) {
@@ -35,13 +39,14 @@ export async function GET(request: Request, { params }: { params: Promise<{ slug
 }
 
 export async function PATCH(request: Request, { params }: { params: Promise<{ slug: string }> }) {
-  const { slug } = await params; const body = await request.json() as { action?: string }; const db = getDb();
+  const { slug } = await params; const body = await request.json() as { action?: string; adminToken?: string }; const db = getDb();
   const user = await getCurrentUser(request, db);
-  if (!user) return Response.json({ error: "Entre na sua conta para administrar este sorteio." }, { status: 401 });
-  if (!(await verifyCsrf(request, db))) return csrfError();
+  if (user) { if (!(await verifyCsrf(request, db))) return csrfError(); }
+  else if (!verifyRequestOrigin(request)) return csrfError();
   const [raffle] = await db.select().from(raffles).where(eq(raffles.slug, slug)).limit(1);
-  if (!raffle || (!user.isAdmin && raffle.creatorUserId !== user.id)) {
-    await writeAuditEvent({ request, category: "security", action: "raffle_admin_denied", severity: "critical", actorUserId: user.id, resourceType: "raffle", resourceId: slug });
+  const ownsByToken = raffle ? ownsRaffleByToken(raffle, String(body.adminToken || "")) : false;
+  if (!raffle || !(ownsByToken || (user && (user.isAdmin || raffle.creatorUserId === user.id)))) {
+    if (user) await writeAuditEvent({ request, category: "security", action: "raffle_admin_denied", severity: "critical", actorUserId: user.id, resourceType: "raffle", resourceId: slug });
     return Response.json({ error: "Acesso administrativo inválido." }, { status: 403 });
   }
   if (body.action === "draw") {
@@ -60,6 +65,6 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ sl
     await db.update(raffleEntries).set({ isWinner: false, winnerPosition: null }).where(eq(raffleEntries.raffleId, raffle.id));
     await db.update(raffles).set({ closed: false }).where(eq(raffles.id, raffle.id));
   }
-  await writeAuditEvent({ request, category: "admin", action: `raffle_${body.action || "unknown"}`, actorUserId: user.id, resourceType: "raffle", resourceId: slug });
+  await writeAuditEvent({ request, category: "admin", action: `raffle_${body.action || "unknown"}`, actorUserId: user?.id, resourceType: "raffle", resourceId: slug });
   return Response.json({ ok: true });
 }

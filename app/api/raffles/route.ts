@@ -1,6 +1,6 @@
 import { getDb } from "../../../db";
 import { getCurrentUser } from "../../../db/auth";
-import { csrfError, verifyCsrf } from "../../../db/csrf";
+import { csrfError, verifyCsrf, verifyRequestOrigin } from "../../../db/csrf";
 import { raffles } from "../../../db/schema";
 
 const slugify = (value: string) =>
@@ -16,11 +16,11 @@ export async function POST(request: Request) {
     if (!title || !prizeTitle) return Response.json({ error: "Informe o nome do sorteio e o prêmio." }, { status: 400 });
     const db = getDb();
     const user = await getCurrentUser(request, db);
-    if (!user) return Response.json({ error: "Entre na sua conta para criar um sorteio." }, { status: 401 });
-    if (!(await verifyCsrf(request, db))) return csrfError();
+    if (user) { if (!(await verifyCsrf(request, db))) return csrfError(); }
+    else if (!verifyRequestOrigin(request)) return csrfError();
     const slug = `${slugify(title) || "sorteio"}-${crypto.randomUUID().slice(0, 6)}`;
     const adminToken = crypto.randomUUID();
-    const [raffle] = await db.insert(raffles).values({ slug, adminToken, creatorUserId: user.id, title, prizeTitle, prizeDescription, winnersCount }).returning();
-    return Response.json({ slug: raffle.slug }, { status: 201 });
+    const [raffle] = await db.insert(raffles).values({ slug, adminToken, creatorUserId: user?.id ?? null, title, prizeTitle, prizeDescription, winnersCount }).returning();
+    return Response.json({ slug: raffle.slug, adminToken: user ? undefined : raffle.adminToken }, { status: 201 });
   } catch (error) { return Response.json({ error: error instanceof Error ? error.message : "Não foi possível criar o sorteio." }, { status: 500 }); }
 }

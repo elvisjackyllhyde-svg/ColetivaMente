@@ -23,7 +23,7 @@ export function RaffleBuilder() {
   const [winnersCount, setWinnersCount] = useState(1);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
-  const [created, setCreated] = useState<{ slug: string } | null>(null);
+  const [created, setCreated] = useState<{ slug: string; adminToken?: string } | null>(null);
 
   const create = async () => {
     setBusy(true); setError("");
@@ -31,6 +31,7 @@ export function RaffleBuilder() {
       const r = await fetch("/api/raffles", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ title, prizeTitle, prizeDescription, winnersCount }) });
       const d = await r.json();
       if (!r.ok) throw new Error(d.error);
+      if (d.adminToken) localStorage.setItem(`raffle-admin-${d.slug}`, d.adminToken);
       setCreated(d);
     } catch (e) { setError(e instanceof Error ? e.message : "Não foi possível criar o sorteio."); }
     finally { setBusy(false); }
@@ -39,7 +40,15 @@ export function RaffleBuilder() {
   const base = typeof location !== "undefined" ? location.origin + location.pathname : "";
   if (created) {
     const entry = `${base}?r=${created.slug}`;
-    return <main className="rCenter"><section className="rSuccess"><div className="rSuccessIcon">🎉</div><p className="rEyebrow">SORTEIO CRIADO</p><h1>Seu link está pronto</h1><p>Envie este link aos participantes. Quando você estiver conectado à sua conta, o mesmo endereço abre automaticamente o painel do sorteio.</p><LinkBox label="Link do sorteio" value={entry} /><div className="rSuccessActions"><a className="rBtn primary" href={entry}>Abrir meu painel</a><a className="rBtn secondary" href={entry}>Ver link compartilhável</a></div></section></main>;
+    const adminLink = created.adminToken ? `${entry}&admin=${created.adminToken}` : entry;
+    return <main className="rCenter"><section className="rSuccess"><div className="rSuccessIcon">🎉</div><p className="rEyebrow">SORTEIO CRIADO · GRÁTIS</p><h1>Seu link está pronto</h1>
+      {created.adminToken
+        ? <p>Guarde o link de administrador só para você — é ele que abre o painel para sortear. O link de participantes é o que você envia para a equipe.</p>
+        : <p>Envie este link aos participantes. Como você está logado, o mesmo endereço abre automaticamente o painel do sorteio.</p>}
+      {created.adminToken && <LinkBox label="Seu link de administrador (privado)" value={adminLink} />}
+      <LinkBox label="Link para participantes" value={entry} />
+      <div className="rSuccessActions"><a className="rBtn primary" href={adminLink}>Abrir meu painel</a><a className="rBtn secondary" href={entry}>Ver link compartilhável</a></div>
+    </section></main>;
   }
 
   return <><RaffleHeader /><main className="rContainer"><div className="rHero"><p className="rEyebrow">CRIE • CONVIDE • SORTEIE</p><h1>Um sorteio para fechar<br />seu treinamento com energia.</h1><p>Monte o sorteio, compartilhe o link com a equipe e revele os ganhadores ao vivo.</p></div>
@@ -74,14 +83,19 @@ export function RaffleView({ slug, legacyAdmin }: { slug: string; legacyAdmin: s
   const [suspense, setSuspense] = useState(false); const [spinName, setSpinName] = useState("");
   const suspenseRef = useRef(false);
   const legacyClaimedRef = useRef(false);
+  const [adminToken] = useState(() => {
+    if (typeof localStorage === "undefined") return legacyAdmin;
+    if (legacyAdmin) { localStorage.setItem(`raffle-admin-${slug}`, legacyAdmin); return legacyAdmin; }
+    return localStorage.getItem(`raffle-admin-${slug}`) || "";
+  });
 
   const load = useCallback(async () => {
     if (legacyAdmin && !legacyClaimedRef.current) { legacyClaimedRef.current = true; await fetch(`/api/raffles/${encodeURIComponent(slug)}/claim`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ legacyToken: legacyAdmin }) }); }
-    const r = await fetch(`/api/raffles/${encodeURIComponent(slug)}`, { cache: "no-store" });
+    const r = await fetch(`/api/raffles/${encodeURIComponent(slug)}${adminToken ? `?admin=${encodeURIComponent(adminToken)}` : ""}`, { cache: "no-store" });
     const d = await r.json();
     if (r.ok) { setInfo(d.raffle); setEntryCount(d.entryCount); setEntries(d.entries || []); setHistory(d.history || []); setAccountHistory(d.accountHistory || []); if (!suspenseRef.current) setWinners(d.winners || []); }
     else setError(d.error);
-  }, [slug, legacyAdmin]);
+  }, [slug, legacyAdmin, adminToken]);
   useEffect(() => { load(); const t = setInterval(load, 5000); return () => clearInterval(t); }, [load]);
   useEffect(() => { setEntered(localStorage.getItem(`raffle-entered-${slug}`) === "1"); }, [slug]);
 
@@ -98,7 +112,7 @@ export function RaffleView({ slug, legacyAdmin }: { slug: string; legacyAdmin: s
 
   const draw = async () => {
     setDrawing(true); setError("");
-    const r = await fetch(`/api/raffles/${slug}`, { method: "PATCH", headers: { "content-type": "application/json" }, body: JSON.stringify({ action: "draw" }) });
+    const r = await fetch(`/api/raffles/${slug}`, { method: "PATCH", headers: { "content-type": "application/json" }, body: JSON.stringify({ action: "draw", adminToken }) });
     const d = await r.json();
     if (!r.ok) { setDrawing(false); return setError(d.error); }
     const pool = entries.length ? entries.map(e => e.name) : ["🎉"];
@@ -111,13 +125,13 @@ export function RaffleView({ slug, legacyAdmin }: { slug: string; legacyAdmin: s
     }, 5000);
   };
   const reset = async () => {
-    await fetch(`/api/raffles/${slug}`, { method: "PATCH", headers: { "content-type": "application/json" }, body: JSON.stringify({ action: "reset" }) });
+    await fetch(`/api/raffles/${slug}`, { method: "PATCH", headers: { "content-type": "application/json" }, body: JSON.stringify({ action: "reset", adminToken }) });
     load();
   };
   const addManual = async () => {
     setAddingManual(true); setError("");
     try {
-      const r = await fetch(`/api/raffles/${slug}/manual`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ name: manualName }) });
+      const r = await fetch(`/api/raffles/${slug}/manual`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ name: manualName, adminToken }) });
       const d = await r.json();
       if (!r.ok) throw new Error(d.error);
       setManualName(""); await load();

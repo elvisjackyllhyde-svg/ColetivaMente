@@ -38,7 +38,7 @@ async function readQuizPdf(file:File){
   return markers.map((m,i)=>text.slice((m.index??0)+m[0].length,markers[i+1]?.index??text.length)).map(block=>{
     const optionMatches=[...block.matchAll(/(?:^|\n)\s*([ABCD])\s*[).:\-]\s*(.+?)(?=\n\s*[ABCD]\s*[).:\-]|\n\s*(?:CORRETA|CORRECTA|RESPUESTA)\s*:|$)/gis)];
     const first=optionMatches[0]?.index??-1, answer=block.match(/(?:CORRETA|CORRECTA|RESPUESTA)\s*:\s*([ABCD])/i), explanation=block.match(/(?:EXPLICAÇÃO|EXPLICACION|EXPLICACIÓN)\s*:\s*([\s\S]+)$/i);
-    return {text:block.slice(0,first).replace(/\s+/g," ").trim(),options:optionMatches.slice(0,4).map(x=>x[2].replace(/\s+/g," ").trim()),correct:answer?letters.indexOf(answer[1].toUpperCase()):-1,explanation:explanation?.[1].replace(/\s+/g," ").trim()||"Respuesta definida por el material importado."};
+    return {text:block.slice(0,first).replace(/\s+/g," ").trim(),options:optionMatches.slice(0,4).map(x=>x[2].replace(/\s+/g," ").trim()),correct:answer?letters.indexOf(answer[1].toUpperCase()):-1,explanation:explanation?.[1].replace(/\s+/g," ").trim()||"Resposta definida pelo material importado."};
   }).filter(q=>q.text&&q.options.length===4&&q.correct>=0);
 }
 
@@ -187,13 +187,13 @@ export function GiroQuizApp() {
     try {
       const res = await fetch("/api/rooms", { method: "POST",headers:{"content-type":"application/json"},body:JSON.stringify({title:quizTitle,subject:quizSubject,questions:customQuestions??undefined,musicTrack,musicScope}) });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "No fue posible crear la sala.");
+      if (!res.ok) throw new Error(data.error || "Não foi possível criar a sala.");
       setCode(data.code); setHostKey(data.hostKey); setScreen("host");
-    } catch (e) { setError(e instanceof Error ? e.message : "Error inesperado."); }
+    } catch (e) { setError(e instanceof Error ? e.message : "Erro inesperado."); }
     finally { setLoading(false); }
   };
 
-  const importPdf=async(file?:File)=>{if(!file)return;setPdfLoading(true);setError("");try{const imported=await readQuizPdf(file);if(!imported.length)throw new Error("No encontramos preguntas en el formato esperado.");setCustomQuestions(imported);setPdfName(file.name);}catch(e){setCustomQuestions(null);setPdfName("");setError(e instanceof Error?e.message:"No fue posible leer el PDF.");}finally{setPdfLoading(false);}};
+  const importPdf=async(file?:File)=>{if(!file)return;setPdfLoading(true);setError("");try{const imported=await readQuizPdf(file);if(!imported.length)throw new Error("Não encontramos perguntas no formato esperado.");setCustomQuestions(imported);setPdfName(file.name);}catch(e){setCustomQuestions(null);setPdfName("");setError(e instanceof Error?e.message:"Não foi possível ler o PDF.");}finally{setPdfLoading(false);}};
   const useStudyNiche=(niche:StudyNiche)=>{setCategoryTopic("");setStudyNiche(niche);setCustomQuestions(makeStudyQuiz(niche,studyCount,difficulty));setQuizTitle(`GiroQuiz ${nicheInfo[niche].name}`);setQuizSubject(`${nicheInfo[niche].description} · nível ${difficulty}`);setPdfName("");setError("");};
   const useCategoryTopic=(topic:CategoryTopic)=>{setStudyNiche("");setCategoryTopic(topic);setCustomQuestions(makeCategoryQuiz(topic,studyCount,difficulty));setQuizTitle(`GiroQuiz ${categoryNames[topic]}`);setQuizSubject(`${categoryNames[topic]} · nível ${difficulty}`);setPdfName("");setError("");};
   const startManualQuestions=()=>{setStudyNiche("");setCategoryTopic("");setPdfName("");setCustomQuestions([emptyQuestion()]);setQuizTitle("Meu GiroQuiz");setQuizSubject("Conteúdo personalizado");setError("")};
@@ -205,9 +205,9 @@ export function GiroQuizApp() {
     try {
       const res = await fetch(`/api/rooms/${code}/join`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ name, email, consent }) });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "No fue posible entrar.");
+      if (!res.ok) throw new Error(data.error || "Não foi possível entrar.");
       setPlayerId(data.playerId); setPlayerKey(data.playerKey); setScreen("player");
-    } catch (e) { setError(e instanceof Error ? e.message : "Error inesperado."); }
+    } catch (e) { setError(e instanceof Error ? e.message : "Erro inesperado."); }
     finally { setLoading(false); }
   };
 
@@ -237,7 +237,7 @@ export function GiroQuizApp() {
     setSelected(option);
     const res = await fetch(`/api/rooms/${code}/answer`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ playerId, playerKey, option }) });
     const data = await res.json() as { correct?: boolean };
-    if (!res.ok) { setSelected(null); setError("La respuesta no fue registrada. Inténtalo otra vez."); }
+    if (!res.ok) { setSelected(null); setError("A resposta não foi registrada. Tente novamente."); }
     else { setImmediateResult(!!data.correct); setFeedbackVisible(true); if(feedbackTimer.current)clearTimeout(feedbackTimer.current); feedbackTimer.current=setTimeout(()=>setFeedbackVisible(false),1800); }
     await fetchState();
   };
