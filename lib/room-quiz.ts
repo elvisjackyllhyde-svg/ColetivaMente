@@ -1,4 +1,4 @@
-import { questions, type QuizQuestion } from "./questions";
+import { questions, type QuizQuestion } from "./questions.ts";
 
 export function roomQuestions(value: unknown): QuizQuestion[] {
   if (typeof value !== "string" || !value) return questions;
