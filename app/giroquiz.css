@@ -226,8 +226,8 @@
 @media(max-width:800px){.gq .creationModes{grid-template-columns:1fr}.gq .creatorFields{grid-template-columns:1fr}}
 @media(max-width:520px){.gq .nicheGrid{grid-template-columns:1fr}.gq .modeHeading{display:grid}.gq .selectedQuiz{align-items:flex-start;flex-direction:column}}
 .gq .hostGameMenu{position:fixed;z-index:20;top:88px;right:18px;background:#fff;border:1px solid #d7dfec;border-radius:14px;padding:10px;display:flex;align-items:center;gap:8px;box-shadow:0 12px 30px #061a3a20}
-.gq .hostGameMenu span{font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);font-weight:900}
-.gq .hostGameMenu button{border:1px solid #cbd6e6;background:#f6f8fc;color:var(--green);border-radius:9px;padding:8px 10px;font-weight:800;font-size:12px}
+.gq .hostGameMenu span{font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:#716687;font-weight:900}
+.gq .hostGameMenu button{border:1px solid #cbd6e6;background:#f6f8fc;color:#5b3fd6;border-radius:9px;padding:8px 10px;font-weight:800;font-size:12px}
 .gq .hostGameMenu .exitGame{color:#a22c20;background:#fff0ed;border-color:#f1c0b9}
 .gq .gameEnded{min-height:calc(100vh - 76px);display:grid;place-content:center;text-align:center;background:var(--green);color:white;padding:24px}
 .gq .gameEnded h1{font-size:clamp(38px,7vw,70px);margin:18px 0 8px}
