@@ -9,7 +9,7 @@ import QRCode from "qrcode";
 import { defaultMusicTrack, musicTrackFile, musicTracks, type MusicScope } from "../lib/music-tracks";
 import { csrfFetch } from "./csrf-client";
 
-type Player = { id: number; name: string; score: number; answered?: boolean };
+type Player = { id: number; name: string; score: number; answered?: boolean; ready?: boolean };
 type CustomQuestion=StudyQuestion;
 const emptyQuestion=():CustomQuestion=>({text:"",options:["","","",""],correct:0,explanation:""});
 type SavedQuiz={id:number;title:string;subject:string;questions:CustomQuestion[];musicTrack:string;musicScope:MusicScope;updatedAt:string};
@@ -242,6 +242,11 @@ export function GiroQuizApp() {
     await fetchState();
   };
 
+  const markReady = async () => {
+    await fetch(`/api/rooms/${code}/ready`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ playerId, playerKey }) });
+    await fetchState();
+  };
+
   const topThree = useMemo(() => state?.players.slice(0, 3) ?? [], [state]);
 
 
@@ -284,7 +289,7 @@ export function GiroQuizApp() {
 
   if (screen === "host") return (
     <div className="gq"><main className="game hostView">
-      <header className="gameHeader"><div className="gqBrand compact"><span className="brandMark">Y</span><span>{state.title}</span></div><div className="roomCode">Sala <b>{code}</b></div><div className="headerTools"><a className="gqHomeLink" href="/">⌂ Página inicial</a><MusicScopeToggle scope={state.musicScope||"all"} onScope={setLiveScope}/><div className="playerCount">● {state.players.length} jogadores</div></div></header>
+      <header className="gameHeader"><div className="gqBrand compact"><span className="brandMark">Y</span><span>{state.title}</span></div><div className="roomCode">Sala <b>{code}</b></div><div className="headerTools"><a className="gqHomeLink" href="/">⌂ Página inicial</a><MusicScopeToggle scope={state.musicScope||"all"} onScope={setLiveScope}/><div className="playerCount">● {state.players.length} jogadores{state.status === "lobby" && state.players.length ? ` · ${state.players.filter(p => p.ready).length} prontos` : ""}</div></div></header>
       {state.status!=="lobby"&&<HostGameMenu onRestart={restartGame} onExit={leaveGame}/>}
       {state.status === "lobby" && <section className="lobby"><div><div className="eyebrow">{state.subject}</div><h1>{state.title}</h1><p>Acesse este site e digite o código, ou escaneie o QR / use o link</p><div className="giantCode">{code}</div><ShareBox joinUrl={joinUrl} qrDataUrl={qrDataUrl} copied={linkCopied} onCopy={copyJoinLink}/><MusicPanel track={state.musicTrack||defaultMusicTrack} scope={state.musicScope||"all"} onTrack={setLiveTrack} onScope={setLiveScope}/><button className="primary" onClick={() => hostAction("start")} disabled={!state.players.length || loading}>Iniciar quiz</button></div><PlayerGrid players={state.players}/></section>}
       {(state.status === "question" || state.status === "reveal") && state.question && <section key={state.question.index} className={`questionStage ${state.phase==="intro"?"introPhase":"answerPhase"}`}>
@@ -301,7 +306,7 @@ export function GiroQuizApp() {
     <div className="gq"><main className="game playerView">
       <header className="gameHeader"><div className="gqBrand compact"><span className="brandMark">Y</span><span>{state.title}</span></div><div className="roomCode">Sala <b>{code}</b></div></header>
       {state.status==="cancelled"&&<section className="gameEnded"><div className="endedIcon">■</div><h1>Partida encerrada</h1><p>O apresentador finalizou esta rodada.</p><button className="primary" onClick={()=>location.href="/"}>Voltar ao início</button></section>}
-      {state.status === "lobby" && <section className="waiting"><div className="avatar">{name.slice(0,1).toUpperCase()}</div><h1>Você está dentro, {name}!</h1><p>Aguarde o apresentador iniciar.</p><div className="pulseDots"><i/><i/><i/></div></section>}
+      {state.status === "lobby" && <section className="waiting"><div className="avatar">{name.slice(0,1).toUpperCase()}</div><h1>Você está dentro, {name}!</h1><p>Aguarde o apresentador iniciar.</p><div className="pulseDots"><i/><i/><i/></div>{(() => { const me = state.players.find(p => p.id === playerId); return <button className="primary" disabled={!!me?.ready} onClick={markReady}>{me?.ready ? "✓ Você está pronto!" : "Estou pronto"}</button>; })()}<PlayerGrid players={state.players}/></section>}
       {state.status === "question" && state.question && <section key={state.question.index} className={`playerQuestion ${state.phase==="intro"?"introPhase":"answerPhase"}`}>
         <div className="mobileMeta"><span>{state.phase==="intro"?"LEIA":`${state.question.index + 1}/${state.question.total}`}</span><div className={`timer ${state.phase==="answering"&&remaining <= 5 ? "danger" : ""}`}>{remaining}</div><span>{state.players.find(p => p.id === playerId)?.score ?? 0} pts</span></div>
         <h1>{state.question.text}</h1>
@@ -352,7 +357,7 @@ function ShareBox({ joinUrl, qrDataUrl, copied, onCopy }: { joinUrl: string; qrD
     {qrDataUrl && <div className="qrBox"><img src={qrDataUrl} alt="QR code para entrar na sala" width={110} height={110} /><small>Aponte a câmera</small></div>}
   </div>;
 }
-function PlayerGrid({ players }: { players: Player[] }) { return <div className="playerGrid"><h2>Jogadores na sala</h2><div>{players.map((p, i) => <span key={p.id}><i style={{background: ["#F0C808","#6CCB9A","#F47B54","#71A8E3"][i%4]}}/>{p.name}</span>)}</div></div>; }
+function PlayerGrid({ players }: { players: Player[] }) { return <div className="playerGrid"><h2>Jogadores na sala</h2><div>{players.map((p, i) => <span key={p.id}><i style={{background: ["#F0C808","#6CCB9A","#F47B54","#71A8E3"][i%4]}}/>{p.name}{p.ready ? " ✓" : ""}</span>)}</div></div>; }
 function MusicPanel({track,scope,onTrack,onScope}:{track:string;scope:MusicScope;onTrack:(id:string)=>void;onScope:(s:MusicScope)=>void}){
   return <div className="soundPanel">
     <div><b>Trilha sonora</b><span>Escolha a música e para quem ela toca</span></div>

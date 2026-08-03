@@ -199,6 +199,7 @@ export const players = sqliteTable("players", {
   score: integer("score").notNull().default(0),
   joinedAt: integer("joined_at").notNull(),
   consentedAt: text("consented_at").notNull().default(""),
+  isReady: integer("is_ready", { mode: "boolean" }).notNull().default(false),
 }, table => ({ uniqueName: uniqueIndex("player_room_name").on(table.roomId, table.name) }));
 
 export const quizAnswers = sqliteTable("answers", {

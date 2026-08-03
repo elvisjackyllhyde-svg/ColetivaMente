@@ -9,7 +9,7 @@ type Env = { DB: D1Database };
 type SocketIdentity = { role: "host" | "player"; playerId?: number };
 type LiveTicket = SocketIdentity & { expiresAt: number };
 type RoomRow = Record<string, number | string | null>;
-type PlayerRow = { id: number; name: string; score: number };
+type PlayerRow = { id: number; name: string; score: number; is_ready: number };
 type AnswerRow = { player_id: number; option: number; correct: number };
 type StateBundle = { base: Record<string, unknown>; answers: Map<number, AnswerRow> };
 
@@ -119,7 +119,7 @@ export class QuizRoom extends DurableObject<Env> {
     }
     const phase = elapsed < INTRO_MS ? "intro" : "answering";
     const phaseEndsAt = status === "question" ? startedAt + (phase === "intro" ? INTRO_MS : TOTAL_MS) : now;
-    const playersResult = await this.env.DB.prepare("SELECT id,name,score FROM players WHERE room_id=? ORDER BY score DESC,joined_at ASC").bind(room.id).all<PlayerRow>();
+    const playersResult = await this.env.DB.prepare("SELECT id,name,score,is_ready FROM players WHERE room_id=? ORDER BY score DESC,joined_at ASC").bind(room.id).all<PlayerRow>();
     const answers: AnswerRow[] = index >= 0
       ? (await this.env.DB.prepare("SELECT player_id,option,correct FROM answers WHERE room_id=? AND question_index=?").bind(room.id, index).all<AnswerRow>()).results
       : [];
@@ -130,7 +130,7 @@ export class QuizRoom extends DurableObject<Env> {
       type: "state", version, serverNow: now, phaseEndsAt, code: this.code,
       title: room.title || "GiroQuiz", subject: room.subject || "", status, phase,
       question: question ? { index, total: questions.length, text: question.text, options: question.options, timeLimit: ANSWER_MS / 1000 } : null,
-      players: playersResult.results.map(player => ({ ...player, answered: answerMap.has(Number(player.id)) })),
+      players: playersResult.results.map(player => ({ ...player, ready: !!player.is_ready, answered: answerMap.has(Number(player.id)) })),
       remainingMs: Math.max(0, phaseEndsAt - now),
       correctOption: status === "reveal" || status === "finished" ? question?.correct : undefined,
       explanation: status === "reveal" || status === "finished" ? question?.explanation : undefined,
