@@ -209,6 +209,6 @@ export function RequireActiveSubscription({ children }: { children: React.ReactN
   const { user, loading } = useAuth();
   if (loading) return <main className="aCenter"><div className="aLoader" /></main>;
   if (!user) return <><AuthHeader /><main className="aCenter"><section className="aCard"><p className="aEyebrow">ACESSO RESTRITO</p><h1>Entre para continuar</h1><p className="aMuted">Você precisa de uma conta para criar essa dinâmica.</p><div className="aSuccessActions"><a className="aBtn primary" href="/?modo=login">Entrar</a><a className="aBtn secondary" href="/?modo=signup">Criar conta</a></div></section></main></>;
-  if (!user.isAdmin && remainingAccessDays(user) === 0) return <><AuthHeader /><main className="aCenter"><section className="aCard"><p className="aEyebrow">ASSINATURA NECESSÁRIA</p><h1>Assine para criar dinâmicas</h1><p className="aMuted">Sua conta está sem dias disponíveis. R$120/mês, cancele quando quiser.</p><a className="aBtn primary big" href="/?modo=conta">Ir para minha conta →</a></section></main></>;
+  if (!user.isAdmin && remainingAccessDays(user) === 0) return <><AuthHeader /><main className="aCenter"><section className="aCard"><p className="aEyebrow">ASSINATURA NECESSÁRIA</p><h1>Assine para criar dinâmicas</h1><p className="aMuted">Sua conta está sem dias disponíveis. R$120 = 30 dias de acesso, sem renovação automática.</p><a className="aBtn primary big" href="/?modo=conta">Ir para minha conta →</a></section></main></>;
   return <>{children}</>;
 }
