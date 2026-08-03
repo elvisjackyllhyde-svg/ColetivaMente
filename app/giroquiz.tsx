@@ -98,6 +98,13 @@ export function GiroQuizApp() {
   const joinUrl = code ? `${location.origin}${location.pathname}?modo=quiz&sala=${code}` : "";
 
   useEffect(() => {
+    if (!user || screen !== "join") return;
+    setName(user.name);
+    setEmail(user.email);
+    setConsent(true);
+  }, [user, screen]);
+
+  useEffect(() => {
     if (screen !== "host" || !code) { setQrDataUrl(""); return; }
     QRCode.toDataURL(joinUrl, { margin: 1, width: 240, color: { dark: "#062A5E", light: "#FFFFFF" } }).then(setQrDataUrl).catch(() => setQrDataUrl(""));
   }, [screen, code, joinUrl]);
@@ -200,10 +207,13 @@ export function GiroQuizApp() {
 
   const joinRoom = async () => {
     unlockAudio();
-    if (code.length !== 6 || name.trim().length < 2 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || !consent) { setError("Informe o código da sala, seu nome, um e-mail válido e aceite a Política de Privacidade."); return; }
+    const joinName = user?.name ?? name;
+    const joinEmail = user?.email ?? email;
+    const joinConsent = user ? true : consent;
+    if (code.length !== 6 || joinName.trim().length < 2 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(joinEmail) || !joinConsent) { setError(user ? "Informe o código da sala." : "Informe o código da sala, seu nome, um e-mail válido e aceite a Política de Privacidade."); return; }
     setLoading(true); setError("");
     try {
-      const res = await fetch(`/api/rooms/${code}/join`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ name, email, consent }) });
+      const res = await fetch(`/api/rooms/${code}/join`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ name: joinName, email: joinEmail, consent: joinConsent }) });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Não foi possível entrar.");
       setPlayerId(data.playerId); setPlayerKey(data.playerKey); setScreen("player");
@@ -270,12 +280,21 @@ export function GiroQuizApp() {
             <button className="back" onClick={() => { setScreen("home"); setError(""); }}>← Voltar</button>
             <label>Código da sala</label>
             <input className="codeInput" inputMode="numeric" maxLength={6} value={code} onChange={e => setCode(e.target.value.replace(/\D/g, ""))} placeholder="000000" autoFocus />
-            <label>Seu nome</label>
-            <input maxLength={24} value={name} onChange={e => setName(e.target.value)} placeholder="Como você quer aparecer?" onKeyDown={e => e.key === "Enter" && joinRoom()} />
-            <label>Seu melhor e-mail</label>
-            <input type="email" maxLength={120} autoComplete="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="voce@empresa.com" onKeyDown={e => e.key === "Enter" && joinRoom()} />
-            <label className="privacyConsent"><input type="checkbox" checked={consent} onChange={e=>setConsent(e.target.checked)}/><span>Concordo com a <a href="/?modo=privacidade" target="_blank">Política de Privacidade</a> e autorizo o uso dos dados para esta dinâmica.</span></label>
-            <button className="primary" onClick={joinRoom} disabled={loading || !consent}>{loading ? "Entrando…" : "Jogar agora"}</button>
+            {user ? (
+              <div className="loggedJoinNotice">
+                <i>{user.name.trim().charAt(0).toUpperCase()}</i>
+                <span>Entrando como <b>{user.name.split(" ")[0]}</b><small>{user.email}</small></span>
+              </div>
+            ) : (
+              <>
+                <label>Seu nome</label>
+                <input maxLength={24} value={name} onChange={e => setName(e.target.value)} placeholder="Como você quer aparecer?" onKeyDown={e => e.key === "Enter" && joinRoom()} />
+                <label>Seu melhor e-mail</label>
+                <input type="email" maxLength={120} autoComplete="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="voce@empresa.com" onKeyDown={e => e.key === "Enter" && joinRoom()} />
+                <label className="privacyConsent"><input type="checkbox" checked={consent} onChange={e=>setConsent(e.target.checked)}/><span>Concordo com a <a href="/?modo=privacidade" target="_blank">Política de Privacidade</a> e autorizo o uso dos dados para esta dinâmica.</span></label>
+              </>
+            )}
+            <button className="primary" onClick={joinRoom} disabled={loading || (!user && !consent)}>{loading ? "Entrando…" : "Jogar agora"}</button>
           </div>
         )}
         {error && <div className="error" role="alert">{error}</div>}
