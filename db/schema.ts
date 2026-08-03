@@ -150,6 +150,7 @@ export const payments = sqliteTable("payments", {
   providerPreferenceId: text("provider_preference_id").notNull().default(""),
   providerPaymentId: text("provider_payment_id").notNull().default(""),
   amountCents: integer("amount_cents").notNull(),
+  accessDays: integer("access_days").notNull().default(30),
   currency: text("currency").notNull().default("BRL"),
   status: text("status").notNull().default("created"),
   approvedAt: text("approved_at"),

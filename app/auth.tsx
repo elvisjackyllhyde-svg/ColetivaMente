@@ -162,10 +162,10 @@ export function AccountPage() {
   }, []);
 
   const logout = async () => { await fetch("/api/auth/logout", { method: "POST" }); location.href = "/"; };
-  const subscribe = async () => {
+  const subscribe = async (plan: "monthly" | "annual") => {
     setBusy(true);
     try {
-      const r = await fetch("/api/billing/checkout", { method: "POST" });
+      const r = await fetch("/api/billing/checkout", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ plan }) });
       const d = await r.json();
       if (d.checkoutUrl) location.href = d.checkoutUrl;
       else alert(d.error || "Assinatura ainda não está disponível.");
@@ -185,11 +185,14 @@ export function AccountPage() {
     {!user.isAdmin && <div className="aStatusRow"><span>DISPONIBILIDADE</span><b className={active ? "aActive" : "aInactive"}>{lifetime ? "Acesso vitalício" : active ? `${days} dias restantes` : "Acesso expirado"}</b></div>}
     <div className="aStatusRow"><span>E-MAIL</span><b>{user.email}</b></div>
     {!active && <>
-      <p className="aMuted">Adquira 30 dias de acesso por R$ 25 para criar GiroQuiz e pesquisas ilimitadas para sua equipe. O Sorteio é grátis, sem conta.</p>
-      <button className="aBtn primary big" disabled={busy} onClick={subscribe}>{busy ? "Abrindo Mercado Pago..." : "Pagar R$ 25 com Mercado Pago →"}</button>
+      <p className="aMuted">Adquira acesso para criar GiroQuiz e pesquisas ilimitadas para sua equipe. O Sorteio é grátis, sem conta.</p>
+      <button className="aBtn primary big" disabled={busy} onClick={() => subscribe("monthly")}>{busy ? "Abrindo Mercado Pago..." : "Pagar R$ 67/mês →"}</button>
+      <button className="aBtn secondary big" disabled={busy} onClick={() => subscribe("annual")}>{busy ? "Abrindo Mercado Pago..." : "Pagar R$ 564 à vista (1 ano) →"}</button>
+      <small className="aMuted">No plano anual, cada mês sai por R$47 — 30% mais barato que o mensal.</small>
     </>}
     {active && <a className="aBtn primary big" href="/">Ir para o painel →</a>}
-    {active && !user.isAdmin && !lifetime && <button className="aBtn secondary big" disabled={busy} onClick={subscribe}>{busy ? "Abrindo Mercado Pago..." : "Adicionar mais 30 dias"}</button>}
+    {active && !user.isAdmin && !lifetime && <button className="aBtn secondary big" disabled={busy} onClick={() => subscribe("monthly")}>{busy ? "Abrindo Mercado Pago..." : "Adicionar mais 30 dias (R$67)"}</button>}
+    {active && !user.isAdmin && !lifetime && <button className="aBtn secondary big" disabled={busy} onClick={() => subscribe("annual")}>{busy ? "Abrindo Mercado Pago..." : "Adicionar mais 1 ano (R$564)"}</button>}
     {user.isAdmin && <a className="aBtn secondary big" href="/?modo=admin">Administrar contas</a>}
     <button className="aBtn textMuted" onClick={logout}>Sair da conta</button>
   </section><div className="accountSecondary"><PaymentHistory /><ActivityLibrary /></div></div></main></>;
@@ -222,6 +225,6 @@ export function RequireActiveSubscription({ children }: { children: React.ReactN
   const { user, loading } = useAuth();
   if (loading) return <main className="aCenter"><div className="aLoader" /></main>;
   if (!user) return <><AuthHeader /><main className="aCenter"><section className="aCard"><p className="aEyebrow">ACESSO RESTRITO</p><h1>Entre para continuar</h1><p className="aMuted">Você precisa de uma conta para criar essa dinâmica.</p><div className="aSuccessActions"><a className="aBtn primary" href="/?modo=login">Entrar</a><a className="aBtn secondary" href="/?modo=signup">Criar conta</a></div></section></main></>;
-  if (!user.isAdmin && remainingAccessDays(user) === 0) return <><AuthHeader /><main className="aCenter"><section className="aCard"><p className="aEyebrow">ASSINATURA NECESSÁRIA</p><h1>Assine para criar dinâmicas</h1><p className="aMuted">Sua conta está sem dias disponíveis. R$25 = 30 dias de acesso, sem renovação automática.</p><a className="aBtn primary big" href="/?modo=conta">Ir para minha conta →</a></section></main></>;
+  if (!user.isAdmin && remainingAccessDays(user) === 0) return <><AuthHeader /><main className="aCenter"><section className="aCard"><p className="aEyebrow">ASSINATURA NECESSÁRIA</p><h1>Assine para criar dinâmicas</h1><p className="aMuted">Sua conta está sem dias disponíveis. R$67/mês ou R$564 à vista por 1 ano (R$47/mês), sem renovação automática.</p><a className="aBtn primary big" href="/?modo=conta">Ir para minha conta →</a></section></main></>;
   return <>{children}</>;
 }

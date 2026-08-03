@@ -5,8 +5,11 @@ import { payments } from "../db/schema";
 
 type MercadoPagoEnv={DB:D1Database;MP_ACCESS_TOKEN?:string;MP_WEBHOOK_SECRET?:string};
 type MercadoPagoPayment={id:number|string;status:string;external_reference?:string;transaction_amount?:number;currency_id?:string;date_approved?:string;live_mode?:boolean};
-export const PLAN_AMOUNT_CENTS=2_500;
-export const PLAN_ACCESS_DAYS=30;
+export type PlanId="monthly"|"annual";
+export const PLANS:Record<PlanId,{amountCents:number;accessDays:number;title:string}>={
+ monthly:{amountCents:6_700,accessDays:30,title:"ColetivaMente - acesso por 30 dias"},
+ annual:{amountCents:56_400,accessDays:365,title:"ColetivaMente - acesso por 1 ano"},
+};
 export const PRODUCTION_ORIGIN="https://coletivamente.app";
 export const mpSecrets=()=>env as unknown as MercadoPagoEnv;
 export const webhookSecretConfigured=()=>Boolean(mpSecrets().MP_WEBHOOK_SECRET?.trim());
@@ -28,7 +31,7 @@ export async function syncMercadoPagoPayment(paymentId:string){
   await db.update(payments).set({status:"approved",providerPaymentId:String(remote.id),approvedAt:remote.date_approved||local.approvedAt||new Date().toISOString(),updatedAt:new Date().toISOString()}).where(eq(payments.id,local.id));
   const runtime=mpSecrets();
   await runtime.DB.batch([
-   runtime.DB.prepare("UPDATE users SET subscription_status = 'active', subscription_expires_at = datetime(MAX(unixepoch('now'), COALESCE(unixepoch(subscription_expires_at), 0)) + ?, 'unixepoch'), total_paid_cents = total_paid_cents + ? WHERE id = ? AND EXISTS (SELECT 1 FROM payments WHERE id = ? AND access_granted_at IS NULL)").bind(PLAN_ACCESS_DAYS*86_400,local.amountCents,local.userId,local.id),
+   runtime.DB.prepare("UPDATE users SET subscription_status = 'active', subscription_expires_at = datetime(MAX(unixepoch('now'), COALESCE(unixepoch(subscription_expires_at), 0)) + ?, 'unixepoch'), total_paid_cents = total_paid_cents + ? WHERE id = ? AND EXISTS (SELECT 1 FROM payments WHERE id = ? AND access_granted_at IS NULL)").bind(local.accessDays*86_400,local.amountCents,local.userId,local.id),
    runtime.DB.prepare("UPDATE payments SET access_granted_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP WHERE id = ? AND access_granted_at IS NULL").bind(local.id),
   ]);
  }else if(local.status!=="approved")await db.update(payments).set({status:normalized,providerPaymentId:String(remote.id),updatedAt:new Date().toISOString()}).where(eq(payments.id,local.id));
