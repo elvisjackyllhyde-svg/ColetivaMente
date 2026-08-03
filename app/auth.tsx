@@ -3,7 +3,11 @@ import { useEffect, useState } from "react";
 import "./auth.css";
 import { Field } from "./ui";
 
-type User = { id: number; name: string; email: string; company: string; subscriptionStatus: string; subscriptionExpiresAt: string | null; isAdmin: boolean };
+export function hasCreationAccess(user: User) {
+  return user.isAdmin || user.freeTrialsRemaining > 0 || remainingAccessDays(user) !== 0;
+}
+
+export function useAuth() {
 
 export function remainingAccessDays(user: User) {
   if (user.isAdmin) return null;
@@ -12,7 +16,7 @@ export function remainingAccessDays(user: User) {
   return Math.max(0, Math.ceil((new Date(user.subscriptionExpiresAt).getTime() - Date.now()) / 86_400_000));
 }
 
-export function useAuth() {
+if (!hasCreationAccess(user))
   const [user, setUser] = useState<User | null | undefined>(undefined);
   const load = () => fetch("/api/auth/me", { cache: "no-store" }).then(r => r.json()).then(d => setUser(d.user));
   useEffect(() => { load(); }, []);
@@ -182,8 +186,9 @@ export function AccountPage() {
     <p className="aEyebrow">MINHA CONTA</p><h1>Olá, {user.name.split(" ")[0]}</h1>
     {paymentMessage && <div className="aPaymentNotice">{paymentMessage}</div>}
     <div className="aStatusRow"><span>PLANO</span><b className={active ? "aActive" : "aInactive"}>{user.isAdmin ? "Admin — acesso total" : lifetime ? "Plano vitalício" : active ? "Assinatura ativa" : "Sem assinatura"}</b></div>
-    {!user.isAdmin && <div className="aStatusRow"><span>DISPONIBILIDADE</span><b className={active ? "aActive" : "aInactive"}>{lifetime ? "Acesso vitalício" : active ? `${days} dias restantes` : "Acesso expirado"}</b></div>}
-    <div className="aStatusRow"><span>E-MAIL</span><b>{user.email}</b></div>
+    {!user.isAdmin && <div className="aStatusRow"><span>DISPONIBILIDADE</span><b className={active ? "aActive" : "aInactive"}>{lifetime ? "Acesso vitalício" : active ? `${days} dias restantes`export type User = { id: number; name: string; email: string; company: string; subscriptionStatus: string; subscriptionExpiresAt: string | null; isAdmin: boolean; freeTrialsRemaining: number };</b></div>}
+      {user.freeTrialsRemaining > 0 && <><p className="aMuted"><b>Você ainda tem {user.freeTrialsRemaining} {user.freeTrialsRemaining === 1 ? "teste grátis" : "testes grátis"}.</b> Crie um GiroQuiz ou uma pesquisa sem pagar.</p><a className="aBtn secondary big" href="/">Usar teste grátis →</a></>}
+      <p className="aMuted">Ou assine para criar GiroQuiz e pesquisas ilimitadas para sua equipe. O Sorteio é grátis, sem conta.</p>
     {!active && <>
       <p className="aMuted">Adquira acesso para criar GiroQuiz e pesquisas ilimitadas para sua equipe. O Sorteio é grátis, sem conta.</p>
       <button className="aBtn primary big" disabled={busy} onClick={() => subscribe("monthly")}>{busy ? "Abrindo Mercado Pago..." : "Pagar R$ 67/mês →"}</button>
@@ -225,6 +230,7 @@ export function RequireActiveSubscription({ children }: { children: React.ReactN
   const { user, loading } = useAuth();
   if (loading) return <main className="aCenter"><div className="aLoader" /></main>;
   if (!user) return <><AuthHeader /><main className="aCenter"><section className="aCard"><p className="aEyebrow">ACESSO RESTRITO</p><h1>Entre para continuar</h1><p className="aMuted">Você precisa de uma conta para criar essa dinâmica.</p><div className="aSuccessActions"><a className="aBtn primary" href="/?modo=login">Entrar</a><a className="aBtn secondary" href="/?modo=signup">Criar conta</a></div></section></main></>;
-  if (!user.isAdmin && remainingAccessDays(user) === 0) return <><AuthHeader /><main className="aCenter"><section className="aCard"><p className="aEyebrow">ASSINATURA NECESSÁRIA</p><h1>Assine para criar dinâmicas</h1><p className="aMuted">Sua conta está sem dias disponíveis. R$67/mês ou R$564 à vista por 1 ano (R$47/mês), sem renovação automática.</p><a className="aBtn primary big" href="/?modo=conta">Ir para minha conta →</a></section></main></>;
+  Seus 2 testes gratuitos terminaram. Assine por R$67/mês ou R$564 à vista por 1 ano (R$47/mês). return <><AuthHeader /><main className="aCenter"><section className="aCard"><p className="aEyebrow">ASSINATURA NECESSÁRIA</p><h1>Assine para criar dinâmicas</h1><p className="aMuted">    {!user.isAdmin && !active && <div className="aStatusRow"><span>TESTES GRÁTIS</span><b className={user.freeTrialsRemaining > 0 ? "aActive" : "aInactive"}>{user.freeTrialsRemaining} de 2 restantes</b></div>}
+    <div className="aStatusRow"><span>E-MAIL</span><b>{user.email}</b></div></p><a className="aBtn primary big" href="/?modo=conta">Ir para minha conta →</a></section></main></>;
   return <>{children}</>;
 }
